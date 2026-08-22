@@ -1,0 +1,66 @@
+# Edge proxy for the challenge host. Brought up once and left alone;
+# challenges attach themselves via labels as they come and go.
+services:
+  traefik:
+    image: traefik:v3.3
+    container_name: traefik
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --providers.docker.network=noco-edge
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      - --entrypoints.web.http.redirections.entryPoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      # DNS-01, because HTTP-01 cannot issue the wildcard we need for
+      # the *.<challenges>.<base> wildcard and we are not enumerating hostnames.
+      - --certificatesresolvers.le.acme.dnschallenge=true
+      - --certificatesresolvers.le.acme.dnschallenge.provider=${NOCO_DNS_PROVIDER:-digitalocean}
+      - --certificatesresolvers.le.acme.email=${NOCO_ACME_EMAIL:?set via deploy/domains.env}
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --accesslog=true
+      - --log.level=INFO
+    # DNS-01 credentials for the wildcard cert. These are provider-specific
+    # (DigitalOcean wants DO_AUTH_TOKEN; Cloudflare wants CF_DNS_API_TOKEN; etc.)
+    # and live in a gitignored dns.env so the provider can change without editing
+    # this file - keep dns.env in step with domain.dns_provider in event.yml.
+    env_file: [dns.env]
+    environment:
+      # Pin the Docker SDK to a version the daemon accepts (its default 1.24 is
+      # rejected by newer daemons). Adjust if your host's daemon is older.
+      DOCKER_API_VERSION: "1.44"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Read-only: Traefik needs to see containers, not control them.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-acme:/letsencrypt
+    networks: [edge]
+    labels:
+      traefik.enable: "false"
+    security_opt: [no-new-privileges:true]
+
+  # One wildcard cert covers every challenge. Traefik only requests certs for
+  # routers that exist, so this dummy router pins the wildcard at startup.
+  whoami:
+    image: traefik/whoami
+    container_name: whoami
+    restart: unless-stopped
+    networks: [edge]
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.whoami.rule: "Host(`${NOCO_PIN_HOST}`)"
+      traefik.http.routers.whoami.entrypoints: "websecure"
+      traefik.http.routers.whoami.tls.certresolver: "le"
+      traefik.http.routers.whoami.tls.domains[0].main: "${NOCO_CHALLENGE_BASE}"
+      traefik.http.routers.whoami.tls.domains[0].sans: "${NOCO_WILDCARD}"
+
+volumes:
+  traefik-acme:
+
+networks:
+  edge:
+    external: true
+    name: noco-edge

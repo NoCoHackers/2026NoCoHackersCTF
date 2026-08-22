@@ -1,0 +1,39 @@
+{
+	email {$NOCO_ACME_EMAIL}
+}
+
+# The scoreboard AND the CTF's public front page. HTTP-01 is fine here - a
+# single fixed hostname. The apex (your main site) is intentionally NOT served.
+{$NOCO_SCOREBOARD_HOST} {
+	encode zstd gzip
+
+	# CTFd's own rate limiting is per-view and generous. These two endpoints
+	# are the ones that get hammered, by both enthusiasm and credential
+	# stuffing, so they get a hard cap at the edge as well.
+	@auth path /login /register /reset_password
+	rate_limit @auth {
+		zone auth {
+			key {remote_host}
+			events 10
+			window 1m
+		}
+	}
+
+	@submit path /api/v1/challenges/attempt
+	rate_limit @submit {
+		zone submit {
+			key {remote_host}
+			events 30
+			window 1m
+		}
+	}
+
+	reverse_proxy ctfd:8000
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
+		-Server
+	}
+}

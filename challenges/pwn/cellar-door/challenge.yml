@@ -1,0 +1,34 @@
+name: Cellar Door
+author: bjames
+category: pwn
+
+description: |
+  The night manager's terminal is still logged in down in the cellar. It only
+  answers to one word, and he never wrote it down. Or did he.
+
+  nc chal.nocohackers.com 30000
+
+value: 100
+type: dynamic
+extra:
+  initial: 300
+  decay: 25
+  minimum: 75
+
+flags:
+  - noco{the_door_was_never_really_locked}
+
+tags: [beginner, warmup]
+hints: []
+files: []
+state: hidden
+version: "1.0"
+
+x-noco:
+  kind: tcp
+  subdomain: null
+  port: 30000
+  memory: 64m
+  cpus: "0.25"
+  pids: 32
+  autosolve: solution/solve.sh

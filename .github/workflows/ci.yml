@@ -1,0 +1,157 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------- lint
+  validate:
+    name: validate manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install pyyaml
+      - name: validate every challenge.yml
+        run: tools/validate.py
+      - name: names.lock is current (rename guard)
+        run: tools/lock-names.py --check
+      - name: domains.env is current
+        run: tools/domains.py --check
+      - name: generated compose is current
+        run: deploy/chals/generate.py --check
+      - name: theme bundle is current
+        run: |
+          sh tools/build-theme.sh
+          git diff --exit-code theme/theme.bundle.css \
+            || { echo "::error::theme.bundle.css is stale - run tools/build-theme.sh"; exit 1; }
+
+  # ------------------------------------------------- which challenges changed
+  changed:
+    name: detect changed challenges
+    runs-on: ubuntu-latest
+    outputs:
+      dirs: ${{ steps.detect.outputs.dirs }}
+      any: ${{ steps.detect.outputs.any }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - id: detect
+        run: |
+          set -euo pipefail
+          BASE=${{ github.event.pull_request.base.sha || 'HEAD~1' }}
+          # A change to the theme or a base image can break every challenge,
+          # so those rebuild everything.
+          if git diff --name-only "$BASE" HEAD | grep -qE '^(theme/|images/|tools/)'; then
+            echo "shared code changed - testing all challenges"
+            DIRS=$(find challenges -name challenge.yml -not -path '*/TEMPLATE/*' \
+                   -printf '%h\n' | sort -u)
+          else
+            DIRS=$(git diff --name-only "$BASE" HEAD \
+                   | grep -oE '^challenges/[^/]+/[^/]+' | sort -u \
+                   | grep -v TEMPLATE || true)
+          fi
+          if [ -z "$DIRS" ]; then
+            echo "any=false" >> "$GITHUB_OUTPUT"
+            echo "dirs=[]"   >> "$GITHUB_OUTPUT"
+          else
+            echo "any=true" >> "$GITHUB_OUTPUT"
+            echo "dirs=$(echo "$DIRS" | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+          fi
+          echo "$DIRS"
+
+  # ------------------------------------------------------ build + autosolve
+  autosolve:
+    name: "solve: ${{ matrix.dir }}"
+    needs: [validate, changed]
+    if: needs.changed.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dir: ${{ fromJson(needs.changed.outputs.dirs) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install pyyaml
+      - name: build base images
+        run: tools/build-base-images.sh
+      - name: build, boot, solve
+        run: tools/test-challenge.sh "${{ matrix.dir }}"
+
+  # --------------------------------------------- whole-stack smoke test
+  dev-stack:
+    name: dev stack comes up and routes
+    needs: [validate]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install pyyaml
+      - name: bring up the entire environment
+        run: make dev
+      - name: smoke-test routing (CTFd + web + tcp through the proxy)
+        run: tools/dev-smoke.sh
+      - name: dump logs on failure
+        if: failure()
+        run: |
+          docker compose -p noco-dev \
+            -f deploy/dev/compose.infra.yml \
+            -f deploy/dev/docker-compose.dev.yml ps || true
+          docker compose -p noco-dev \
+            -f deploy/dev/compose.infra.yml \
+            -f deploy/dev/docker-compose.dev.yml logs --tail=60 || true
+      - name: tear down
+        if: always()
+        run: make dev-down CLEAN=1 || true
+
+  # ------------------------------------------------------------- publish
+  publish:
+    name: push images
+    needs: [validate, changed, autosolve, dev-stack]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install pyyaml
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: build and push base images
+        run: |
+          tools/build-base-images.sh
+          for i in chal-theme chal-web chal-pwn caddy-ratelimit; do
+            docker push "ghcr.io/nocohackers/$i:2026"
+          done
+      - name: build and push challenge images
+        run: |
+          set -euo pipefail
+          find challenges -name challenge.yml -not -path '*/TEMPLATE/*' -printf '%h\n' \
+          | sort -u | while read -r d; do
+              eval "$(python3 tools/chalmeta.py "$d")"
+              [ "$CHAL_KIND" = "static" ] && continue
+              name="$(basename "$(dirname "$d")")-$(basename "$d")"
+              img="ghcr.io/nocohackers/chal-$name:2026"
+              echo "==> $img"
+              docker build -q -f "$d/Dockerfile" -t "$img" .
+              docker push "$img"
+            done

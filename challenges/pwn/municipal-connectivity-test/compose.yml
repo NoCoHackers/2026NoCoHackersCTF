@@ -1,0 +1,13 @@
+services:
+  chal:
+    build:
+      context: ../../..
+      dockerfile: challenges/pwn/municipal-connectivity-test/Dockerfile
+    environment:
+      FLAG: "${FLAG:?set FLAG in your environment}"
+    ports: ["30001:1337"]
+    read_only: true
+    tmpfs: [/tmp, "/flag:size=1m"]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cap_add: [SETUID, SETGID, SETPCAP]

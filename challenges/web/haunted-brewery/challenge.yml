@@ -1,0 +1,40 @@
+name: Haunted Brewery
+author: bjames
+category: web
+description: 'The taproom on Linden Street closed in 1987 and never quite emptied
+  out.
+
+  Their website is still up, still serving, and still answering requests it
+
+  really shouldn''t. Somebody left the cellar door open.
+
+
+  Connect: https://brewery.chal.nocohackers.com
+
+  '
+value: 100
+type: dynamic
+extra:
+  initial: 300
+  decay: 25
+  minimum: 75
+flags:
+- noco{old_town_never_stopped_pouring}
+tags:
+- beginner
+- recon
+hints:
+- content: Ask the site what it doesn't want indexed.
+  cost: 25
+files: []
+state: hidden
+version: '1.0'
+x-noco:
+  kind: web
+  subdomain: brewery
+  port: null
+  memory: 128m
+  cpus: '0.25'
+  pids: 64
+  autosolve: solution/solve.sh
+  healthcheck_path: /

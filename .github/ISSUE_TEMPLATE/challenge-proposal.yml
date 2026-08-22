@@ -1,0 +1,60 @@
+name: Challenge proposal
+description: Pitch a challenge before you build it
+title: "[proposal] "
+labels: [proposal]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Pitch first, build second. It takes two minutes and it stops three
+        people from independently writing the same JWT challenge.
+
+  - type: input
+    id: title
+    attributes: {label: Working title}
+    validations: {required: true}
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options: [web, pwn, rev, crypto, forensics, osint, misc]
+    validations: {required: true}
+
+  - type: dropdown
+    id: difficulty
+    attributes:
+      label: Difficulty
+      options:
+        - beginner (most of the room solves it)
+        - intermediate (half the room)
+        - hard (a handful of solves)
+        - brutal (0-2 solves, and that's the point)
+    validations: {required: true}
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What's the bug or the trick? Spoilers are fine, this repo is private.
+    validations: {required: true}
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: How does it run?
+      options:
+        - web (HTTP, gets a subdomain)
+        - tcp (netcat, gets a port)
+        - static (handout file only)
+    validations: {required: true}
+
+  - type: textarea
+    id: needs
+    attributes:
+      label: Anything unusual it needs
+      description: >
+        Persistent state, a database, more than 256 MB, outbound network,
+        per-team isolation. Say so now — these are the things that turn into
+        infrastructure work.
+      placeholder: "Nothing unusual / needs a Postgres / needs 1 GB"

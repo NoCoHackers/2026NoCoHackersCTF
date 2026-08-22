@@ -1,0 +1,35 @@
+name: Municipal Connectivity Test
+author: bjames
+category: pwn
+
+description: |
+  The city dragged an old connectivity tester out of storage after something
+  chewed through the fiber under College Avenue. It promises to repeat every
+  message verbatim, which should make diagnosing the line easy.
+
+  nc chal.nocohackers.com 30001
+
+value: 100
+type: dynamic
+extra:
+  initial: 400
+  decay: 20
+  minimum: 100
+
+flags:
+  - noco{municipal_shell_services_are_online}
+
+tags: [beginner, command-injection]
+hints: []
+files: []
+state: hidden
+version: "1.0"
+
+x-noco:
+  kind: tcp
+  subdomain: null
+  port: 30001
+  memory: 64m
+  cpus: "0.25"
+  pids: 32
+  autosolve: solution/solve.sh

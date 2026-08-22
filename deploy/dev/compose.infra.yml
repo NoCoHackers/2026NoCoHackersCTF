@@ -1,0 +1,79 @@
+# Local-development infrastructure: Traefik (file provider, no ACME) + CTFd.
+# Brought up alongside deploy/dev/docker-compose.dev.yml by `make dev`.
+#
+# Everything routes over plain HTTP on :80 by hostname:
+#   http://ctf.localhost           CTFd scoreboard
+#   http://<sub>.chal.localhost    each web challenge
+#   http://localhost:8081          Traefik dashboard
+# TCP challenges are on their published ports (30000-30099) as in prod.
+#
+# Dev uses Traefik's FILE provider (routes generated into traefik-dynamic.yml),
+# not the Docker provider: some daemons reject the Docker SDK's default API
+# version, and the file provider doesn't touch the Docker socket at all.
+#
+# *.localhost resolves to 127.0.0.1 in browsers and most host resolvers.
+# If yours doesn't, run `make dev-hosts` for the /etc/hosts lines.
+services:
+  traefik:
+    image: traefik:v3.3
+    container_name: noco-dev-traefik
+    restart: unless-stopped
+    command:
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --api.dashboard=true
+      - --api.insecure=true          # dev only: dashboard on :8081 without auth
+      - --log.level=INFO
+    ports:
+      - "80:80"
+      - "8081:8080"
+    volumes:
+      - ./traefik-dynamic.yml:/etc/traefik/dynamic.yml:ro
+    networks: [edge]
+
+  ctfd:
+    image: ctfd/ctfd:3.7.7
+    container_name: noco-dev-ctfd
+    restart: unless-stopped
+    depends_on: [db, cache]
+    environment:
+      SECRET_KEY: "dev-not-secret-000000000000000000000000"
+      DATABASE_URL: "mysql+pymysql://ctfd:ctfd@db/ctfd"
+      REDIS_URL: "redis://cache:6379"
+      WORKERS: "2"
+      REVERSE_PROXY: "true"
+    volumes:
+      - ctfd-uploads:/var/uploads
+    networks: [edge, back]
+
+  db:
+    image: mariadb:10.11
+    container_name: noco-dev-db
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: dev-root
+      MARIADB_USER: ctfd
+      MARIADB_PASSWORD: ctfd
+      MARIADB_DATABASE: ctfd
+    command: [mysqld, --character-set-server=utf8mb4, --collation-server=utf8mb4_unicode_ci]
+    volumes:
+      - db-data:/var/lib/mysql
+    networks: [back]
+
+  cache:
+    image: redis:7-alpine
+    container_name: noco-dev-cache
+    restart: unless-stopped
+    networks: [back]
+
+volumes:
+  ctfd-uploads:
+  db-data:
+
+networks:
+  edge:
+    external: true
+    name: noco-dev-edge
+  back:
+    internal: true

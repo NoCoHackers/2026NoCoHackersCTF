@@ -1,0 +1,9 @@
+# Pinned toolchain for pushing challenges/config to CTFd (`make sync`).
+#
+# ctfcli and CTFd move together. ctfcli >= 0.1.7 calls /api/v1/solutions, which
+# only exists in CTFd >= 3.8; our scoreboard is pinned to CTFd 3.7.7, so we pin
+# ctfcli to the last release that predates that call. If you bump the CTFd image
+# in deploy/scoreboard/compose.yml, re-check this pairing.
+ctfcli==0.1.6
+requests>=2.31
+PyYAML>=6

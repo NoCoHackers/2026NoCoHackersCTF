@@ -1,0 +1,15 @@
+# ctfcli project config. Committed on purpose: it holds only the public
+# scoreboard URL, never a token. The admin access token is supplied at runtime
+# via the CTFCLI_ACCESS_TOKEN environment variable (see deploy/scoreboard/sync.sh).
+#
+# The production URL is derived from event.yml's domain block by `make sync`
+# (single source of truth); the url below is only a fallback for bare `ctf`
+# invocations. CTFCLI_URL overrides both, e.g. for `make sync TARGET=dev`.
+[config]
+url = https://ctf.nocohackers.com
+ssl_verify = true
+
+# Challenges are synced by explicit path (deploy/scoreboard/sync.sh walks the
+# tree), so this section stays empty - the filesystem is the source of truth,
+# not a hand-maintained list.
+[challenges]

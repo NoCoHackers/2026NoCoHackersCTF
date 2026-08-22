@@ -1,0 +1,77 @@
+# Scoreboard host. This box runs nothing that a player can send bytes to
+# except CTFd itself. No challenge containers, ever.
+services:
+  caddy:
+    # Custom Caddy: stock + the rate_limit module (see images/caddy/).
+    image: ghcr.io/nocohackers/caddy-ratelimit:2026
+    build:
+      context: ../../images/caddy
+    container_name: caddy
+    restart: unless-stopped
+    env_file: [../domains.env]     # NOCO_* -> {$NOCO_*} in the Caddyfile
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [front]
+    security_opt: [no-new-privileges:true]
+
+  ctfd:
+    image: ctfd/ctfd:3.7.7
+    container_name: ctfd
+    restart: unless-stopped
+    depends_on: [db, cache]
+    environment:
+      SECRET_KEY: "${CTFD_SECRET_KEY:?generate with openssl rand -hex 32}"
+      DATABASE_URL: "mysql+pymysql://ctfd:${MYSQL_PASSWORD:?}@db/ctfd"
+      REDIS_URL: "redis://cache:6379"
+      WORKERS: "4"
+      LOG_FOLDER: /var/log/CTFd
+      ACCESS_LOG: "-"
+      ERROR_LOG: "-"
+      REVERSE_PROXY: "true"
+    volumes:
+      - ctfd-uploads:/var/uploads
+      - ./themes/noco-2026:/opt/CTFd/CTFd/themes/noco-2026:ro
+    networks: [front, back]
+    security_opt: [no-new-privileges:true]
+
+  db:
+    image: mariadb:10.11
+    container_name: ctfd-db
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:?}"
+      MARIADB_USER: ctfd
+      MARIADB_PASSWORD: "${MYSQL_PASSWORD:?}"
+      MARIADB_DATABASE: ctfd
+    command:
+      [mysqld, --character-set-server=utf8mb4, --collation-server=utf8mb4_unicode_ci,
+       --wait_timeout=28800, --log-bin=/var/lib/mysql/bin.log]
+    volumes:
+      - db-data:/var/lib/mysql
+    networks: [back]          # never exposed to the host or the internet
+    security_opt: [no-new-privileges:true]
+
+  cache:
+    image: redis:7-alpine
+    container_name: ctfd-cache
+    restart: unless-stopped
+    command: [redis-server, --save, "60", "1", --appendonly, "no"]
+    volumes:
+      - redis-data:/data
+    networks: [back]
+    security_opt: [no-new-privileges:true]
+
+volumes:
+  ctfd-uploads:
+  db-data:
+  redis-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  front:
+  back:
+    internal: true            # db and cache have no route off this host

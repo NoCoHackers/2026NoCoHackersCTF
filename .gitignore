@@ -1,0 +1,13 @@
+# Secrets. flags.env is decrypted on the host from flags.enc.env.
+deploy/chals/flags.env
+deploy/scoreboard/.env
+*.key
+*.pem
+
+# CTFd theme build output
+deploy/scoreboard/themes/noco-2026/node_modules/
+deploy/scoreboard/themes/noco-2026/static/
+
+__pycache__/
+*.pyc
+.DS_Store

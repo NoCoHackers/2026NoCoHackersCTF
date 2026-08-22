@@ -1,0 +1,21 @@
+# Every challenge needs a review from someone who did not write it. Assign a
+# category owner so reviews land on a person rather than in a queue.
+#
+# Replace these handles before opening submissions.
+
+/challenges/web/        @noco-organizers/web
+/challenges/pwn/        @noco-organizers/pwn
+/challenges/rev/        @noco-organizers/rev
+/challenges/crypto/     @noco-organizers/crypto
+/challenges/forensics/  @noco-organizers/forensics
+/challenges/osint/      @noco-organizers/misc
+/challenges/misc/       @noco-organizers/misc
+
+# Infrastructure and theme changes affect the whole event.
+/theme/                 @noco-organizers/leads
+/images/                @noco-organizers/leads
+/deploy/                @noco-organizers/leads
+/tools/                 @noco-organizers/leads
+/.github/               @noco-organizers/leads
+/AGENTS.md              @noco-organizers/leads
+/INFRASTRUCTURE.md      @noco-organizers/leads

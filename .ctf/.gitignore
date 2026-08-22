@@ -1,0 +1,3 @@
+# never commit a token if one ever lands here
+config.local
+*.token

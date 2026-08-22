@@ -1,0 +1,9 @@
+{
+  "generated": "1987-10-31T23:59:00-06:00",
+  "location": "Linden St. cellar, Fort Collins CO",
+  "casks": [
+    {"id": 11, "style": "porter",     "status": "sealed"},
+    {"id": 12, "style": "amber",      "status": "sealed"},
+    {"id": 13, "style": "unrecorded", "status": "open", "note": "__FLAG__"}
+  ]
+}

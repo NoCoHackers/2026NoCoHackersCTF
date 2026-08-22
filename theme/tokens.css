@@ -1,0 +1,80 @@
+/* ==========================================================================
+   NoCo Hackers CTF 2026 — design tokens
+   "Something's loose in Old Town."
+
+   Every colour, size and font in the event comes from this file. Challenge
+   authors should never hard-code a hex value: use the variables. If you need
+   a colour that isn't here, open a PR against the theme rather than inventing
+   one locally — that's how 25 challenges end up looking like 25 events.
+   ========================================================================== */
+
+:root {
+  /* --- Core palette: a Fort Collins October night ----------------------- */
+  --noco-night:    #12101b;  /* sky over Horsetooth, page background        */
+  --noco-dusk:     #1d1930;  /* raised surfaces, cards                      */
+  --noco-shadow:   #2a2440;  /* borders, dividers, inset wells              */
+  --noco-fog:      #9a94ae;  /* muted text, river mist off the Poudre       */
+  --noco-moon:     #ede9f5;  /* primary text                               */
+
+  --noco-pumpkin:  #e8631a;  /* primary accent — jack-o'-lantern            */
+  --noco-ember:    #f59a2e;  /* hover / secondary accent                    */
+  --noco-aspen:    #f2c14e;  /* highlights, gold aspen in the canyon        */
+  --noco-poudre:   #2e7d8f;  /* cool counterweight, links                   */
+  --noco-lichen:   #6b8f3a;  /* success, solved, healthy                    */
+  --noco-blood:    #a32b2b;  /* error, danger, wrong flag                   */
+
+  /* --- Semantic aliases: prefer these in components -------------------- */
+  --bg:            var(--noco-night);
+  --bg-raised:     var(--noco-dusk);
+  --bg-inset:      #0c0a13;
+  --border:        var(--noco-shadow);
+  --text:          var(--noco-moon);
+  --text-muted:    var(--noco-fog);
+  --accent:        var(--noco-pumpkin);
+  --accent-hover:  var(--noco-ember);
+  --link:          var(--noco-aspen);
+  --success:       var(--noco-lichen);
+  --danger:        var(--noco-blood);
+
+  /* --- Type ------------------------------------------------------------ */
+  --font-display: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-body:    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+                  "Segoe UI", sans-serif;
+  --font-mono:    ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono",
+                  Menlo, monospace;
+
+  --step--1: clamp(0.83rem, 0.80rem + 0.15vw, 0.92rem);
+  --step-0:  clamp(1.00rem, 0.96rem + 0.20vw, 1.10rem);
+  --step-1:  clamp(1.25rem, 1.15rem + 0.50vw, 1.55rem);
+  --step-2:  clamp(1.60rem, 1.40rem + 1.00vw, 2.20rem);
+  --step-3:  clamp(2.10rem, 1.70rem + 2.00vw, 3.20rem);
+
+  /* --- Space, shape, motion -------------------------------------------- */
+  --space-1: 0.25rem;  --space-2: 0.5rem;   --space-3: 0.75rem;
+  --space-4: 1rem;     --space-5: 1.5rem;   --space-6: 2rem;
+  --space-7: 3rem;     --space-8: 4.5rem;
+
+  --radius:     6px;
+  --radius-lg:  12px;
+  --measure:    68ch;
+
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-2: 0 8px 28px rgb(0 0 0 / 0.45);
+  --glow:     0 0 0 1px rgb(232 99 26 / 0.35), 0 0 24px -6px rgb(232 99 26 / 0.55);
+
+  --ease: cubic-bezier(0.2, 0, 0.1, 1);
+}
+
+/* The event is night-time by design. A light mode exists only so that
+   printouts, projectors and daylight-blind screens stay readable. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg:         #f6f2ea;
+    --bg-raised:  #fffdf8;
+    --bg-inset:   #ece5d8;
+    --border:     #d8cdb8;
+    --text:       #221c2b;
+    --text-muted: #5f5870;
+    --link:       #8a5a12;
+  }
+}

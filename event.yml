@@ -1,0 +1,40 @@
+# Event-level CTFd configuration, pushed by `make sync` (tools/ctfd-config.py).
+#
+# These are CONFIG values, not challenges and not user data. Pushing them
+# updates the running scoreboard's settings in place - it never touches
+# players, teams, submissions, or scores. Safe to re-run mid-event.
+#
+# Only the keys listed here are pushed; anything you set in the admin panel and
+# don't list here is left alone.
+
+# Participation model. "users" = individual players; "teams" = teams of players.
+# This is a LAUNCH-TIME decision: `make sync` will set it on a fresh instance but
+# REFUSES to change it once participants exist, because flipping modes after
+# people have scored regroups or orphans their scores. Change it here before the
+# event opens, not during.
+mode: users
+
+name: "NoCo Hackers CTF 2026"
+description: "Something's loose in Old Town. A Halloween CTF from NoCo Hackers, Fort Collins."
+theme_color: "#e8631a"        # matches theme/tokens.css --noco-pumpkin
+# start/end are optional ISO-8601 or unix timestamps; leave unset to not manage them.
+# start: "2026-10-31T18:00:00-06:00"
+# end:   "2026-11-01T18:00:00-06:00"
+
+# ---------------------------------------------------------------------------
+# Domains. This is the ONE place hostnames live; the challenge-route generator,
+# the Traefik edge config, the Caddy scoreboard config, and `make sync` all
+# derive from it. After changing anything here, run `make domains`.
+#
+# IMPORTANT: `base` is your MAIN website's domain. The CTF never serves the apex
+# or www - those stay pointed at your normal site. The whole CTF lives under
+# subdomains of `base`:
+#   scoreboard/landing -> <scoreboard>.<base>       (ctf.nocohackers.com) = CTFd
+#   web challenges     -> <sub>.<challenges>.<base> (brewery.chal.nocohackers.com)
+#   wildcard cert      -> *.<challenges>.<base>
+domain:
+  base: nocohackers.com
+  scoreboard: ctf               # CTFd (also the CTF's front page) at ctf.<base>
+  challenges: chal              # web challenges at *.chal.<base>
+  acme_email: brandon@cyb3r.sh
+  dns_provider: digitalocean    # Traefik DNS-01 provider for the wildcard cert
