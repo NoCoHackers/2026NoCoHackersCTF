@@ -2,6 +2,38 @@
 # Produced by deploy/chals/generate.py from the challenges/ tree.
 # Run `make -C deploy/chals generate` after changing any challenge.yml.
 services:
+  crypto-mountain-ave-mile:
+    container_name: crypto-mountain-ave-mile
+    image: ghcr.io/nocohackers/chal-crypto-mountain-ave-mile:2026
+    environment:
+      FLAG: ${FLAG_CRYPTO_MOUNTAIN_AVE_MILE:?missing flag}
+    restart: unless-stopped
+    read_only: true
+    tmpfs: &id002
+    - /tmp:size=64m
+    - /var/run
+    - /var/cache/nginx
+    - /srv/www:size=64m,uid=101,gid=101,mode=0755
+    security_opt:
+    - no-new-privileges:true
+    cap_drop:
+    - ALL
+    pids_limit: 64
+    mem_limit: 128m
+    cpus: 0.25
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    networks:
+    - edge
+    labels:
+      traefik.enable: 'true'
+      traefik.http.routers.crypto-mountain-ave-mile.rule: Host(`mile.chal.nocohackers.com`)
+      traefik.http.services.crypto-mountain-ave-mile.loadbalancer.server.port: '8080'
+      traefik.http.routers.crypto-mountain-ave-mile.entrypoints: websecure
+      traefik.http.routers.crypto-mountain-ave-mile.tls.certresolver: le
   pwn-cellar-door:
     container_name: pwn-cellar-door
     image: ghcr.io/nocohackers/chal-pwn-cellar-door:2026
@@ -67,11 +99,7 @@ services:
       FLAG: ${FLAG_WEB_HAUNTED_BREWERY:?missing flag}
     restart: unless-stopped
     read_only: true
-    tmpfs:
-    - /tmp:size=64m
-    - /var/run
-    - /var/cache/nginx
-    - /srv/www:size=64m,uid=101,gid=101,mode=0755
+    tmpfs: *id002
     security_opt:
     - no-new-privileges:true
     cap_drop:

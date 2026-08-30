@@ -1,0 +1,18 @@
+# Local development only. The real deployment file is generated from every
+# challenge.yml by deploy/chals/generate.py - do not hand-edit that one.
+#
+#   FLAG='noco{local}' docker compose -f challenges/crypto/mountain-ave-mile/compose.yml up --build
+services:
+  chal:
+    build:
+      context: ../../..
+      dockerfile: challenges/crypto/mountain-ave-mile/Dockerfile
+    environment:
+      FLAG: "${FLAG:?set FLAG in your environment}"
+    ports: ["8080:8080"]
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]

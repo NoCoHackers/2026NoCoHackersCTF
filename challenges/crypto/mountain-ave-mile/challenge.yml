@@ -1,0 +1,53 @@
+name: Midnight Mountain Ave Mile
+author: bjames
+category: crypto
+description: 'Every Halloween at midnight the ghosts of Old Town run the
+  Mountain Avenue Mile. This year every runner wore a brand-new Poudre
+  Tracking Systems Trace recorder - continuous GPX recording, certified
+  live under a Merkle root - and mid-race the PTS logger stopped
+  working.
+
+  The root survived. Three quarter-mile segments survived. The finish
+  segment - the one that would have named the finisher - did not. The
+  gun clock says 3:43.7 and the Headless Harrier''s trace led every
+  quarter, but nobody can prove who crossed the line.
+
+  The perpetual award goes to whoever produces a finish file that
+  reproduces the certified root.
+
+
+  Connect: https://mile.chal.nocohackers.com
+
+  '
+value: 200
+type: dynamic
+extra:
+  initial: 400
+  decay: 20
+  minimum: 100
+flags:
+- noco{crc_is_n0t_a_hash_function}
+tags:
+- medium
+- merkle
+hints:
+- content: Rebuild what survived. Every value in the tree is sixteen bits
+    wide - fold each candidate finish leaf against the certified root
+    until one matches.
+  cost: 25
+- content: CRC-16 is linear over GF(2) - flip a message bit and the digest
+    moves by a fixed delta. Two bytes of freedom anywhere the XML parser
+    will tolerate are more than enough.
+  cost: 50
+files: []
+state: hidden
+version: '1.0'
+x-noco:
+  kind: web
+  subdomain: mile
+  port: null
+  memory: 128m
+  cpus: '0.25'
+  pids: 64
+  autosolve: solution/solve.sh
+  healthcheck_path: /healthz
