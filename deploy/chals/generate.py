@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Generate deploy/chals/docker-compose.generated.yml from every challenge.yml.
+Generate deploy/chals/docker-compose.generated.yml from challenge bundles.
 
     deploy/chals/generate.py            # write the prod file
     deploy/chals/generate.py --check    # fail if the prod file is stale (CI uses this)
     deploy/chals/generate.py --dev      # write the local-dev file (build:, no TLS)
 
 The generated compose is the single source of truth for what runs on the
-challenge host. Nobody hand-edits it; you change a challenge.yml and re-run.
+challenge host. Nobody hand-edits it; change a bundle manifest and re-run.
 
 Flags are NOT written here. They come from deploy/chals/flags.env, which is
 sops/age-encrypted in the repo and decrypted on the host at deploy time.
@@ -24,6 +24,12 @@ except ImportError:
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
+from chalbundle import (  # noqa: E402
+    discover_bundles,
+    host_flag_var,
+    container_flag_var,
+    service_name,
+)
 from domains import derive as _derive  # noqa: E402
 
 _D = _derive()
@@ -59,10 +65,6 @@ HEADER = """\
 """
 
 
-def service_name(chal_dir: Path) -> str:
-    return f"{chal_dir.parent.name}-{chal_dir.name}"
-
-
 # Writable paths each base image needs on an otherwise read-only rootfs.
 TMPFS = {
     "web": ["/tmp:size=64m", "/var/run", "/var/cache/nginx",
@@ -92,23 +94,31 @@ def hardening(x: dict) -> dict:
     }
 
 
-def build_service(chal_dir: Path, data: dict, cfg: dict) -> tuple[str, dict] | None:
-    x = data.get("x-noco") or {}
+def build_service(bundle, cfg: dict) -> tuple[str, dict] | None:
+    x = bundle.x
     kind = x.get("kind")
     if kind == "static":
         return None
 
-    name = service_name(chal_dir)
+    name = service_name(bundle)
     svc: dict = {"container_name": name}
 
     if cfg["build"]:
         # Local dev builds from source so you can iterate without CI/registry.
-        rel = chal_dir.relative_to(ROOT).as_posix()
+        rel = bundle.directory.relative_to(ROOT).as_posix()
         svc["build"] = {"context": "../..", "dockerfile": f"{rel}/Dockerfile"}
     else:
         svc["image"] = f"{REGISTRY}/chal-{name}:{TAG}"
 
-    svc["environment"] = {"FLAG": "${FLAG_%s:?missing flag}" % name.upper().replace("-", "_")}
+    primary_ref = "${%s:?missing flag}" % host_flag_var(bundle, bundle.primary)
+    environment = {"FLAG": primary_ref}
+    # Keep legacy single-entry compose output and runtime behavior unchanged.
+    # Named aliases appear only when the source actually has multiple entries.
+    if len(bundle.entries) > 1:
+        for entry in bundle.entries:
+            environment[container_flag_var(entry)] = (
+                "${%s:?missing flag}" % host_flag_var(bundle, entry))
+    svc["environment"] = environment
     svc.update(hardening(x))
 
     if kind == "web":
@@ -139,11 +149,10 @@ def build_service(chal_dir: Path, data: dict, cfg: dict) -> tuple[str, dict] | N
 
 def generate(cfg: dict) -> str:
     services: dict[str, dict] = {}
-    for manifest in sorted((ROOT / "challenges").rglob("challenge.yml")):
-        if manifest.parent.name == "TEMPLATE":
+    for bundle in discover_bundles(ROOT / "challenges"):
+        if bundle.directory.name == "TEMPLATE":
             continue
-        data = yaml.safe_load(manifest.read_text())
-        built = build_service(manifest.parent, data, cfg)
+        built = build_service(bundle, cfg)
         if built:
             services[built[0]] = built[1]
 
@@ -171,14 +180,13 @@ def write_dev_dynamic(cfg: dict) -> Path:
     shared network.
     """
     routers, services = {}, {}
-    for manifest in sorted((ROOT / "challenges").rglob("challenge.yml")):
-        if manifest.parent.name == "TEMPLATE":
+    for bundle in discover_bundles(ROOT / "challenges"):
+        if bundle.directory.name == "TEMPLATE":
             continue
-        data = yaml.safe_load(manifest.read_text())
-        x = data.get("x-noco") or {}
+        x = bundle.x
         if x.get("kind") != "web":
             continue
-        name = service_name(manifest.parent)
+        name = service_name(bundle)
         routers[name] = {"rule": f"Host(`{x['subdomain']}.{cfg['domain']}`)",
                          "entrypoints": ["web"], "service": name}
         services[name] = {"loadBalancer": {"servers": [{"url": f"http://{name}:8080"}]}}

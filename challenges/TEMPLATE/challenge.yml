@@ -6,6 +6,8 @@
 # `tools/validate.py`, which CI runs on every pull request.
 #
 # Copy this whole directory to challenges/<category>/<your-slug>/ to start.
+# For another separately scored flag in the same codebase, add a complete
+# challenge.<id>.yml manifest; see README.md for its restricted x-noco block.
 # ---------------------------------------------------------------------------
 
 name: Template Challenge          # shown in CTFd; title case, no category prefix
@@ -27,7 +29,7 @@ extra:
   minimum: 100
 
 flags:
-  - noco{template_replace_me}     # the REAL flag; the repo is private until the event
+  - noco{template_replace_me}     # exactly one REAL flag per scoreboard manifest
 
 tags: [beginner]
 hints: []                         # [{content: "...", cost: 50}] - organizers may add more

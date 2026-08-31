@@ -4,7 +4,8 @@
 #   deploy/scoreboard/sync.sh                 # sync to production (.ctf/config url)
 #   deploy/scoreboard/sync.sh --dev           # sync to the local `make dev` stack
 #   deploy/scoreboard/sync.sh --dry-run       # config diff only, no challenge writes
-#   deploy/scoreboard/sync.sh -c challenges/web/haunted-brewery   # one challenge
+#   deploy/scoreboard/sync.sh -c challenges/web/haunted-brewery   # one bundle
+#   deploy/scoreboard/sync.sh -c challenges/misc/device/challenge.uart.yml
 #
 # The admin token comes from the environment, never the repo:
 #   export CTFCLI_ACCESS_TOKEN=ctfd_xxx        # from CTFd: Settings -> Access Tokens
@@ -53,16 +54,17 @@ fi
 # --- challenges: install --force = create-if-new, update-if-exists ----------
 # Neither create nor update reads or writes any user/solve data.
 if [[ -n "$ONE" ]]; then
-  dirs=("$ONE")
+  manifest_output=$(python3 tools/chalbundle.py manifests "$ONE")
 else
-  mapfile -t dirs < <(find challenges -name challenge.yml -not -path '*/TEMPLATE/*' -printf '%h\n' | sort)
+  manifest_output=$(python3 tools/chalbundle.py manifests)
 fi
+mapfile -t manifests <<< "$manifest_output"
 
-echo "sync: pushing ${#dirs[@]} challenge(s) ..."
+echo "sync: pushing ${#manifests[@]} challenge(s) ..."
 fail=0
-for d in "${dirs[@]}"; do
-  name=$(python3 tools/chalmeta.py "$d" | sed -n "s/^CHAL_TITLE=//p" | tr -d "'")
-  if ctf challenge install --force -c "$d/challenge.yml" >/tmp/noco-sync.$$ 2>&1; then
+for manifest in "${manifests[@]}"; do
+  name=$(python3 tools/chalmeta.py "$manifest" | sed -n "s/^CHAL_TITLE=//p" | tr -d "'")
+  if ctf challenge install --force -c "$manifest" >/tmp/noco-sync.$$ 2>&1; then
     if grep -q 'Syncing existing' /tmp/noco-sync.$$; then verb="updated"; else verb="created"; fi
     echo "  ok   $verb: $name"
   else

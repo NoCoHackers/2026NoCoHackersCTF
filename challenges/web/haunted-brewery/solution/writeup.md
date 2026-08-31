@@ -1,6 +1,6 @@
 # Haunted Brewery - author's write-up
 
-**Flag:** `noco{old_town_never_stopped_pouring}`
+**Flag:** declared in `challenge.yml`
 
 ## Intended path
 

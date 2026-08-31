@@ -7,7 +7,7 @@
 - [ ] `tools/validate.py challenges/<cat>/<slug>` passes
 - [ ] `tools/test-challenge.sh challenges/<cat>/<slug>` passes locally
 - [ ] `solution/writeup.md` describes the intended path **and** any unintended ones I know about
-- [ ] The flag is only in `challenge.yml` — the source uses `__FLAG__`
+- [ ] Each flag is only in its challenge manifest — source uses runtime flag tokens
 - [ ] The challenge links the shared theme and looks like the rest of the event
 - [ ] Resource caps in `x-noco` are honest (I know roughly what this thing uses)
 - [ ] `state: hidden` — organizers publish at kickoff

@@ -1,6 +1,6 @@
 # Template Challenge - author's write-up
 
-**Flag:** `noco{template_replace_me}`
+**Flag:** declared in `challenge.yml`
 
 ## Intended path
 

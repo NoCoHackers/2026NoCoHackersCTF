@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
-"""
-Validate NoCo Hackers CTF challenge directories.
+"""Validate NoCo Hackers CTF challenge bundles.
 
-    tools/validate.py                     # every challenge
-    tools/validate.py challenges/web/foo  # just these
+    tools/validate.py                     # every challenge bundle
+    tools/validate.py challenges/web/foo  # just this bundle
 
-Checks each challenge in isolation, then checks the whole set for the things
-that only break when challenges collide: duplicate subdomains, duplicate TCP
-ports, reused flags.
-
-Exit 0 = clean. Exit 1 = at least one error. Warnings never fail the build.
+A bundle has one deployment and one or more independently scored manifests.
+Checks local metadata and files first, then global name, flag, endpoint, and
+published-name collisions.
 """
 from __future__ import annotations
 
@@ -18,12 +15,23 @@ import sys
 from pathlib import Path
 
 try:
-    import yaml
+    import yaml  # noqa: F401 - gives a useful dependency error before imports below
 except ImportError:
     sys.exit("validate: PyYAML is required -> pip install pyyaml")
 
 ROOT = Path(__file__).resolve().parent.parent
 CHALLENGES = ROOT / "challenges"
+sys.path.insert(0, str(ROOT / "tools"))
+from chalbundle import (  # noqa: E402
+    Bundle,
+    BundleError,
+    candidate_manifests,
+    discover_bundle_dirs,
+    host_flag_var,
+    load_bundle,
+    lock_key,
+    manifest_id,
+)
 
 CATEGORIES = {"web", "pwn", "rev", "crypto", "forensics", "osint", "misc"}
 KINDS = {"web", "tcp", "static"}
@@ -31,8 +39,7 @@ FLAG_RE = re.compile(r"^noco\{[\x20-\x7e]{3,120}\}$")
 FLAG_ANY_RE = re.compile(r"noco\{[^}\s]{3,120}\}")
 SUBDOMAIN_RE = re.compile(r"^[a-z0-9]([a-z0-9-]{0,30}[a-z0-9])?$")
 PORT_RANGE = range(30000, 30100)
-
-# Placeholder values that are fine in TEMPLATE/ and nowhere else.
+SUPPLEMENTAL_X_KEYS = {"autosolve"}
 PLACEHOLDERS = {"noco{template_replace_me}", "your-github-handle", "Template Challenge"}
 
 
@@ -48,46 +55,32 @@ class Report:
         self.warnings.append(f"{where}: {msg}")
 
 
-def load(path: Path, rep: Report):
-    """Parse challenge.yml, or return None if it is unusable."""
-    where = path.relative_to(ROOT).as_posix()
-    try:
-        data = yaml.safe_load(path.read_text())
-    except yaml.YAMLError as exc:
-        rep.error(where, f"invalid YAML: {exc}")
-        return None
-    if not isinstance(data, dict):
-        rep.error(where, "must be a YAML mapping")
-        return None
-    return data
+def entry_where(entry) -> str:
+    return entry.manifest.relative_to(ROOT).as_posix()
 
 
-def check_one(chal_dir: Path, rep: Report) -> dict | None:
-    where = chal_dir.relative_to(ROOT).as_posix()
-    is_template = chal_dir.name == "TEMPLATE"
+def normalized_flags(value, where: str, rep: Report) -> list:
+    if isinstance(value, str):
+        return [value]
+    if not isinstance(value, list):
+        rep.error(where, "flags must be a list containing exactly one flag")
+        return []
+    return value
 
-    manifest = chal_dir / "challenge.yml"
-    if not manifest.is_file():
-        rep.error(where, "no challenge.yml")
-        return None
 
-    data = load(manifest, rep)
-    if data is None:
-        return None
+def check_entry(bundle: Bundle, entry, rep: Report, is_template: bool) -> dict:
+    where = entry_where(entry)
+    data = entry.data
 
-    # --- required top-level fields -------------------------------------
     for key in ("name", "author", "category", "description", "value", "flags"):
         if not data.get(key):
             rep.error(where, f"missing required field '{key}'")
 
     category = data.get("category")
-    if category and category not in CATEGORIES:
-        rep.error(where, f"category '{category}' not in {sorted(CATEGORIES)}")
-
-    # Directory must live under its declared category, so the tree stays
-    # navigable and generate.py can trust the path.
-    parent = chal_dir.parent.name
-    if not is_template and category and parent != category:
+    if category and (not isinstance(category, str) or category not in CATEGORIES):
+        rep.error(where, f"category {category!r} not in {sorted(CATEGORIES)}")
+    parent = bundle.directory.parent.name
+    if not is_template and isinstance(category, str) and category and parent != category:
         rep.error(where, f"lives under challenges/{parent}/ but declares category '{category}'")
 
     if data.get("state") not in (None, "hidden", "visible"):
@@ -95,10 +88,9 @@ def check_one(chal_dir: Path, rep: Report) -> dict | None:
     if not is_template and data.get("state") == "visible":
         rep.warn(where, "state is 'visible' - organizers flip this at kickoff, not authors")
 
-    # --- flags ----------------------------------------------------------
-    flags = data.get("flags") or []
-    if isinstance(flags, str):
-        flags = [flags]
+    flags = normalized_flags(data.get("flags"), where, rep)
+    if len(flags) != 1:
+        rep.error(where, "each scoreboard manifest must declare exactly one flag")
     for flag in flags:
         if not isinstance(flag, str) or not FLAG_RE.match(flag):
             rep.error(where, f"flag {flag!r} must match noco{{...}}")
@@ -107,104 +99,121 @@ def check_one(chal_dir: Path, rep: Report) -> dict | None:
         elif not is_template and len(flag) < 12:
             rep.warn(where, f"flag {flag!r} is very short - easy to brute or guess")
 
-    if not is_template and data.get("author") in PLACEHOLDERS:
+    author = data.get("author")
+    if not is_template and isinstance(author, str) and author in PLACEHOLDERS:
         rep.error(where, "author is still the template placeholder")
 
-    # --- x-noco deploy block --------------------------------------------
-    x = data.get("x-noco")
-    if not isinstance(x, dict):
-        rep.error(where, "missing 'x-noco' deploy block")
-        return {"dir": chal_dir, "data": data, "flags": flags, "x": {}}
+    raw_x = data.get("x-noco")
+    if not isinstance(raw_x, dict):
+        rep.error(where, "missing 'x-noco' block")
+        x = {}
+    else:
+        x = raw_x
+    if not entry.primary:
+        forbidden = sorted(str(key) for key in x if key not in SUPPLEMENTAL_X_KEYS)
+        if forbidden:
+            rep.error(where, "supplemental x-noco may only contain autosolve; remove "
+                      + ", ".join(forbidden))
 
+    default_solve = "solution/solve.sh" if entry.primary else f"solution/solve-{entry.id}.sh"
+    raw_solve = x.get("autosolve", default_solve)
+    solve_valid = (isinstance(raw_solve, str) and bool(raw_solve.strip())
+                   and not Path(raw_solve).is_absolute() and ".." not in Path(raw_solve).parts)
+    if not solve_valid:
+        rep.error(where, "x-noco.autosolve must be a non-empty relative path without '..'")
+    else:
+        solve = bundle.directory / raw_solve
+        if not solve.is_file():
+            rep.error(where, f"no autosolve script at {raw_solve} - CI cannot verify this entry")
+        elif not (solve.stat().st_mode & 0o111):
+            rep.error(where, f"{raw_solve} is not executable (chmod +x)")
+
+    handouts = data.get("files") or []
+    if not isinstance(handouts, list):
+        rep.error(where, "files must be a list of bundle-relative paths")
+        handouts = []
+    for handout in handouts:
+        if not isinstance(handout, str) or not (bundle.directory / handout).is_file():
+            rep.error(where, f"files: lists {handout!r} which does not exist")
+
+    return {"bundle": bundle, "entry": entry, "data": data, "flags": flags,
+            "x": bundle.x, "primary": entry.primary}
+
+
+def check_bundle(chal_dir: Path, rep: Report) -> list[dict]:
+    where = chal_dir.relative_to(ROOT).as_posix()
+    try:
+        bundle = load_bundle(chal_dir)
+    except BundleError as exc:
+        rep.error(where, str(exc))
+        return []
+
+    is_template = bundle.directory.name == "TEMPLATE"
+    loaded = [check_entry(bundle, entry, rep, is_template) for entry in bundle.entries]
+    x = bundle.x
     kind = x.get("kind")
-    if kind not in KINDS:
-        rep.error(where, f"x-noco.kind must be one of {sorted(KINDS)}")
-
+    if not isinstance(kind, str) or kind not in KINDS:
+        rep.error(entry_where(bundle.primary), f"x-noco.kind must be one of {sorted(KINDS)}")
     if kind == "web":
         sub = x.get("subdomain")
         if not sub or not isinstance(sub, str) or not SUBDOMAIN_RE.match(sub):
-            rep.error(where, f"x-noco.subdomain {sub!r} must be a short lowercase DNS label")
+            rep.error(entry_where(bundle.primary),
+                      f"x-noco.subdomain {sub!r} must be a short lowercase DNS label")
         if x.get("port"):
-            rep.warn(where, "x-noco.port is ignored for kind 'web'")
+            rep.warn(entry_where(bundle.primary), "x-noco.port is ignored for kind 'web'")
     elif kind == "tcp":
         port = x.get("port")
         if not isinstance(port, int) or port not in PORT_RANGE:
-            rep.error(where, f"x-noco.port {port!r} must be an int in 30000-30099")
+            rep.error(entry_where(bundle.primary),
+                      f"x-noco.port {port!r} must be an int in 30000-30099")
 
-    # --- files on disk ---------------------------------------------------
     if kind in ("web", "tcp"):
         if not (chal_dir / "Dockerfile").is_file() and not (chal_dir / "compose.yml").is_file():
             rep.error(where, f"kind '{kind}' needs a Dockerfile or compose.yml")
-
-    solve_rel = x.get("autosolve", "solution/solve.sh")
-    solve = chal_dir / solve_rel
-    if not solve.is_file():
-        rep.error(where, f"no autosolve script at {solve_rel} - CI cannot verify this challenge")
-    elif not (solve.stat().st_mode & 0o111):
-        rep.error(where, f"{solve_rel} is not executable (chmod +x)")
-
     if not (chal_dir / "solution" / "writeup.md").is_file():
         rep.error(where, "no solution/writeup.md")
 
-    # --- declared handout files must exist --------------------------------
-    for f in data.get("files") or []:
-        if not (chal_dir / f).is_file():
-            rep.error(where, f"files: lists '{f}' which does not exist")
-
-    # --- flag must not be baked into the source ---------------------------
-    # The flag belongs in challenge.yml and in the runtime environment. If it
-    # appears in the build context it ends up in an image layer, and image
-    # layers are readable by anyone who can pull.
+    # Scan once against every entry flag. Recognized manifests are the sole
+    # allowed locations for their literals, including under solution/.
+    all_flags = {flag for item in loaded for flag in item["flags"] if isinstance(flag, str)}
+    manifests = {p.resolve() for p in candidate_manifests(chal_dir)}
     for path in chal_dir.rglob("*"):
-        if not path.is_file():
+        if not path.is_file() or path.resolve() in manifests:
             continue
         rel = path.relative_to(chal_dir).as_posix()
-        if rel == "challenge.yml" or rel.startswith("solution/"):
-            continue
         try:
             text = path.read_text(errors="ignore")
         except OSError:
             continue
         for hit in FLAG_ANY_RE.findall(text):
-            if hit in flags:
-                rep.error(where, f"flag literal found in {rel} - use the __FLAG__ token instead")
+            if hit in all_flags:
+                rep.error(where, f"flag literal found in {rel} - use a runtime flag token instead")
 
-    return {"dir": chal_dir, "data": data, "flags": flags, "x": x}
+    return loaded
 
 
-def check_domain_consistency(rep: Report) -> None:
-    """Warn when a hostname in player-facing content drifts from event.yml.
-
-    Config domains are generated (see tools/domains.py), but challenge
-    descriptions and theme links carry hostnames as prose.
-    After a rebrand those go stale silently; this flags any that don't sit under
-    the configured apex. Warning only - content isn't machine-critical.
-    """
-    import re as _re
-    sys.path.insert(0, str(ROOT / "tools"))
+def check_domain_consistency(rep: Report, dirs: list[Path]) -> None:
     try:
         from domains import derive as _derive
         apex = _derive()["NOCO_APEX"]
     except Exception:
         return
 
-    # Only hostnames in a real connect context: a URL, or `nc host port`.
-    # This avoids matching filenames like favicon.svg or theme.bundle.css.
-    host_re = _re.compile(
-        r"(?:https?://|\bnc\s+)((?:[a-z0-9-]+\.)+[a-z]{2,})", _re.I)
+    host_re = re.compile(r"(?:https?://|\bnc\s+)((?:[a-z0-9-]+\.)+[a-z]{2,})", re.I)
     ignore = ("localhost", "example.com", "example.dev", "example.org")
-    targets = list((ROOT / "challenges").rglob("challenge.yml"))
+    targets = [p for directory in dirs for p in candidate_manifests(directory)
+               if manifest_id(p) is not None]
     targets += [ROOT / "theme" / "partials" / "header.html",
                 ROOT / "theme" / "partials" / "footer.html"]
-    for f in targets:
-        if not f.is_file():
+    for path in targets:
+        if not path.is_file():
             continue
-        where = f.relative_to(ROOT).as_posix()
-        text = f.read_text(errors="ignore")
+        where = path.relative_to(ROOT).as_posix()
+        text = path.read_text(errors="ignore")
         seen = set()
         for host in host_re.findall(text):
             host = host.lower()
-            if host in seen or any(host == i or host.endswith("." + i) for i in ignore):
+            if host in seen or any(host == item or host.endswith("." + item) for item in ignore):
                 continue
             if host.endswith("." + apex) or host == apex:
                 continue
@@ -214,36 +223,30 @@ def check_domain_consistency(rep: Report) -> None:
 
 
 def check_name_lock(loaded: list[dict], rep: Report) -> None:
-    """Warn when a challenge's name drifts from challenges/names.lock.
-
-    CTFd matches challenges by name on sync, so a directory that changes its
-    `name:` after being published becomes a *new* challenge in CTFd and splits
-    its solves. The lock records the last-blessed name per directory; an intended
-    rename is blessed by re-running tools/lock-names.py.
-    """
-    import json as _json
+    import json
 
     lock_path = CHALLENGES / "names.lock"
     if not lock_path.is_file():
         rep.warn("challenges/names.lock", "missing - run tools/lock-names.py to create it")
         return
     try:
-        lock = _json.loads(lock_path.read_text())
-    except _json.JSONDecodeError as exc:
+        lock = json.loads(lock_path.read_text())
+    except json.JSONDecodeError as exc:
         rep.error("challenges/names.lock", f"invalid JSON: {exc}")
         return
 
-    for entry in loaded:
-        if entry["dir"].name == "TEMPLATE":
+    for item in loaded:
+        bundle, entry = item["bundle"], item["entry"]
+        if bundle.directory.name == "TEMPLATE":
             continue
-        rel = entry["dir"].relative_to(ROOT).as_posix()
-        name = entry["data"].get("name")
-        if rel in lock and name and lock[rel] != name:
-            rep.error(rel, f"name changed '{lock[rel]}' -> '{name}' since last sync. "
-                           f"CTFd matches by name: this creates a NEW challenge and splits "
-                           f"solves. If intended, re-run tools/lock-names.py to bless it.")
-        elif rel not in lock:
-            rep.warn(rel, "not in names.lock (new challenge) - run tools/lock-names.py")
+        key = lock_key(bundle, entry)
+        name = item["data"].get("name")
+        if key in lock and name and lock[key] != name:
+            rep.error(key, f"name changed '{lock[key]}' -> '{name}' since last sync. "
+                      "CTFd matches by name: this creates a NEW challenge and splits solves. "
+                      "If intended, re-run tools/lock-names.py to bless it.")
+        elif key not in lock:
+            rep.warn(key, "not in names.lock (new challenge) - run tools/lock-names.py")
 
 
 def check_collisions(loaded: list[dict], rep: Report) -> None:
@@ -251,32 +254,40 @@ def check_collisions(loaded: list[dict], rep: Report) -> None:
     ports: dict[int, str] = {}
     flags: dict[str, str] = {}
     names: dict[str, str] = {}
+    host_vars: dict[str, str] = {}
 
-    for entry in loaded:
-        where = entry["dir"].relative_to(ROOT).as_posix()
-        if entry["dir"].name == "TEMPLATE":
+    for item in loaded:
+        bundle, entry, data = item["bundle"], item["entry"], item["data"]
+        if bundle.directory.name == "TEMPLATE":
             continue
-        x, data = entry["x"], entry["data"]
+        where = entry_where(entry)
+        if bundle.x.get("kind") != "static":
+            variable = host_flag_var(bundle, entry)
+            if variable in host_vars:
+                rep.error(where, f"runtime flag variable {variable} already used by "
+                          f"{host_vars[variable]}")
+            host_vars[variable] = where
+        if item["primary"]:
+            sub = item["x"].get("subdomain")
+            if isinstance(sub, str) and sub:
+                if sub in subs:
+                    rep.error(where, f"subdomain '{sub}' already used by {subs[sub]}")
+                subs[sub] = where
+            port = item["x"].get("port")
+            if isinstance(port, int):
+                if port in ports:
+                    rep.error(where, f"port {port} already used by {ports[port]}")
+                ports[port] = where
 
-        sub = x.get("subdomain")
-        if sub:
-            if sub in subs:
-                rep.error(where, f"subdomain '{sub}' already used by {subs[sub]}")
-            subs[sub] = where
-
-        port = x.get("port")
-        if isinstance(port, int):
-            if port in ports:
-                rep.error(where, f"port {port} already used by {ports[port]}")
-            ports[port] = where
-
-        for flag in entry["flags"]:
+        for flag in item["flags"]:
+            if not isinstance(flag, str):
+                continue
             if flag in flags:
                 rep.error(where, f"flag reused from {flags[flag]}")
             flags[flag] = where
 
         name = data.get("name")
-        if name:
+        if isinstance(name, str) and name:
             key = name.strip().lower()
             if key in names:
                 rep.error(where, f"challenge name '{name}' already used by {names[key]}")
@@ -284,9 +295,13 @@ def check_collisions(loaded: list[dict], rep: Report) -> None:
 
 
 def discover(args: list[str]) -> list[Path]:
-    if args:
-        return [Path(a).resolve() for a in args]
-    return sorted(p.parent for p in CHALLENGES.rglob("challenge.yml"))
+    if not args:
+        return discover_bundle_dirs(CHALLENGES)
+    dirs = []
+    for arg in args:
+        path = Path(arg).resolve()
+        dirs.append(path.parent if path.is_file() else path)
+    return sorted(set(dirs))
 
 
 def main() -> int:
@@ -296,17 +311,17 @@ def main() -> int:
         print("validate: no challenges found")
         return 0
 
-    loaded = [e for e in (check_one(d, rep) for d in dirs) if e]
+    loaded = [item for directory in dirs for item in check_bundle(directory, rep)]
     check_collisions(loaded, rep)
     check_name_lock(loaded, rep)
-    check_domain_consistency(rep)
+    check_domain_consistency(rep, dirs)
 
-    for w in rep.warnings:
-        print(f"  warn  {w}")
-    for e in rep.errors:
-        print(f"  ERROR {e}")
+    for warning in rep.warnings:
+        print(f"  warn  {warning}")
+    for error in rep.errors:
+        print(f"  ERROR {error}")
 
-    print(f"\nvalidate: {len(dirs)} challenge(s), "
+    print(f"\nvalidate: {len(dirs)} bundle(s), {len(loaded)} scoreboard entry(s), "
           f"{len(rep.errors)} error(s), {len(rep.warnings)} warning(s)")
     return 1 if rep.errors else 0
 
