@@ -1,15 +1,8 @@
 #!/usr/bin/env python3
-"""
-Write challenges/names.lock: the path -> name mapping the sync relies on.
+"""Write challenges/names.lock: stable entry identity -> published CTFd name.
 
-CTFd matches challenges BY NAME, so renaming a challenge that's already been
-pushed creates a *second* challenge and splits its solves. The lock records the
-name each challenge directory last published under; tools/validate.py warns if a
-directory's current name drifts from the lock. Run this to bless an intended
-rename (or a new challenge):
-
-    tools/lock-names.py            # update the lock to match the tree
-    tools/lock-names.py --check    # fail if the lock is stale (also run by validate)
+Primary entries retain their historic directory key. Supplemental entries use
+``<directory>#<id>`` so adding bundle support does not churn existing locks.
 """
 from __future__ import annotations
 
@@ -17,7 +10,7 @@ import json
 import sys
 from pathlib import Path
 
-import yaml
+from chalbundle import discover_bundles, lock_key
 
 ROOT = Path(__file__).resolve().parent.parent
 LOCK = ROOT / "challenges" / "names.lock"
@@ -25,13 +18,12 @@ LOCK = ROOT / "challenges" / "names.lock"
 
 def current() -> dict[str, str]:
     out = {}
-    for m in sorted((ROOT / "challenges").rglob("challenge.yml")):
-        if m.parent.name == "TEMPLATE":
+    for bundle in discover_bundles(ROOT / "challenges"):
+        if bundle.directory.name == "TEMPLATE":
             continue
-        rel = m.parent.relative_to(ROOT).as_posix()
-        data = yaml.safe_load(m.read_text()) or {}
-        if data.get("name"):
-            out[rel] = data["name"]
+        for entry in bundle.entries:
+            if entry.data.get("name"):
+                out[lock_key(bundle, entry)] = entry.data["name"]
     return out
 
 

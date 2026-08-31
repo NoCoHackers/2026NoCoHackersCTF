@@ -1,6 +1,6 @@
 # Cellar Door - author's write-up
 
-**Flag:** `noco{the_door_was_never_really_locked}`
+**Flag:** declared in `challenge.yml`
 
 ## Intended path
 

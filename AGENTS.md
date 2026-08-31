@@ -23,8 +23,9 @@ to a public registry before kickoff.
    challenge carries `solution/solve.sh`, and CI builds it, boots it, and runs
    that script against it on every pull request. No exceptions, including "it's
    just a static file" — those still get a solve that fetches the file.
-2. **Flags live in `challenge.yml` and nowhere else in the source tree.** The
-   source uses the literal token `__FLAG__`; the runtime substitutes it. A flag
+2. **Flags live in challenge manifests and nowhere else in the source tree.**
+   The primary is `challenge.yml`; separately scored bundle entries use
+   `challenge.<id>.yml`. Source uses runtime flag tokens rather than literals. A flag
    baked into an image layer is readable by anyone who can pull the image, so
    CI fails the build if it finds one. See *Flag handling* below.
 3. **Never weaken the container hardening.** `read_only`, `cap_drop: ALL`,
@@ -50,7 +51,8 @@ images/         Docker images. The three challenge base images:
                   base-web      nginx, SSI partials, runtime flag templating
                   base-pwn      socat fork-per-connection, drops to `ctf` user
                 plus caddy/     the scoreboard's Caddy + rate_limit module
-challenges/     One directory per challenge under its category. TEMPLATE/ is
+challenges/     One codebase/deployment bundle per directory under its category.
+                A bundle may contain multiple scored manifests. TEMPLATE/ is
                 the starting point; copy it.
 deploy/chals/   Challenge host: Traefik + the generated compose + a Makefile.
 deploy/scoreboard/  Scoreboard host: CTFd + MariaDB + Redis + Caddy + backups.
@@ -76,6 +78,12 @@ Then open a PR. A category owner who didn't write it reviews it (see
 `<category>` is one of: `web pwn rev crypto forensics osint misc`. The
 directory must live under its declared category — the validator enforces it.
 
+A single codebase may expose multiple independently scored entries. Keep the
+primary deployment in `challenge.yml` and add complete ctfcli manifests named
+`challenge.<id>.yml`, where `<id>` is lowercase kebab-case and `main` is
+reserved. Supplemental `x-noco` blocks may only set `autosolve`; they inherit
+the primary service, endpoint, and resource limits. See `challenges/TEMPLATE/README.md`.
+
 ### The `challenge.yml` contract
 
 The top-level keys are ctfcli's schema and sync straight into CTFd. The
@@ -84,7 +92,7 @@ that matter most:
 
 | field | why it matters |
 |-------|----------------|
-| `flags` | The **only** place the real flag appears. Must match `noco{...}`, must be unique across the event. |
+| `flags` | Exactly one real flag per scored manifest. Must match `noco{...}` and be unique across the event. |
 | `x-noco.kind` | `web` (gets a subdomain), `tcp` (gets a port), or `static` (handout only, nothing runs). |
 | `x-noco.subdomain` | web only; globally unique; becomes `<sub>.chal.nocohackers.com`. |
 | `x-noco.port` | tcp only; unique; in `30000–30099`. |
@@ -96,13 +104,16 @@ that matter most:
 
 This is the single most important mechanic in the repo, so it's spelled out.
 
-- The real flag is written **once**, in `challenge.yml` under `flags:`.
-- In your challenge source, write `__FLAG__` wherever the flag should appear.
-- `base-web` renders `/srv/app` into a tmpfs at boot, substituting `__FLAG__`
-  (and `{{CHAL_NAME}}`, `{{CHAL_CATEGORY}}`) from environment variables. The
-  flag never touches an image layer.
-- `base-pwn` writes the flag to `/flag.txt` at boot, root-owned and readable by
-  the `ctf` user the challenge runs as.
+- Each real flag is written **once**, under `flags:` in its `challenge.yml` or
+  `challenge.<id>.yml` manifest.
+- In challenge source, use `__FLAG__` for the primary or `__FLAG_<ID>__` for a
+  bundle entry. Runtime environment equivalents are `FLAG` and
+  `NOCO_FLAG_<ID>` (kebab-case ids become underscores).
+- `base-web` renders `/srv/app` into a tmpfs at boot, substituting those flag
+  tokens (and `{{CHAL_NAME}}`, `{{CHAL_CATEGORY}}`) from environment variables.
+  Flags never touch an image layer.
+- `base-pwn` writes the primary to `/flag/flag.txt` and named bundle flags to
+  `/flag/<id>.txt`, root-owned and readable by the `ctf` user.
 - On the host, flags come from `deploy/chals/flags.env`, which is decrypted
   (sops/age) from `flags.enc.env` at deploy time. The plaintext is never
   committed — it's in `.gitignore`.
@@ -110,8 +121,8 @@ This is the single most important mechanic in the repo, so it's spelled out.
   anywhere in the source outside `challenge.yml`, and `tools/test-challenge.sh`
   greps the built image's filesystem and history for the flag.
 
-If you find yourself wanting to put the flag directly in a file, you want
-`__FLAG__` instead. Always.
+If you find yourself wanting to put a flag directly in source, use its runtime
+flag token instead. Always.
 
 ## The base images
 
@@ -209,8 +220,8 @@ under `make dev` works when deployed.
 
 | command | what it checks |
 |---------|----------------|
-| `tools/validate.py [dir]` | Manifest schema; flag format; subdomain/port/flag/name collisions across the whole event; flag not leaked into source. |
-| `tools/test-challenge.sh <dir>` | Builds the image, scans it for the flag, boots it hardened, waits for health, runs the autosolve, asserts it prints the declared flag. Set `NOCO_KEEP=1` to leave the container up. |
+| `tools/validate.py [dir]` | Bundle and manifest schema; flag format; subdomain/port/flag/name collisions; flags not leaked into source. |
+| `tools/test-challenge.sh <dir>` | Builds once, scans every flag, then uses a fresh hardened container for each autosolve. Static bundles run their solves without a container. Set `NOCO_KEEP=1` to leave containers up. |
 | `tools/build-base-images.sh` | Rebuilds the three base images. |
 | `sh tools/build-theme.sh` | Regenerates `theme/theme.bundle.css`. Run it after editing tokens or components; CI fails if the bundle is stale. |
 

@@ -59,16 +59,16 @@ tools/test-challenge.sh challenges/web/haunted-brewery        # build, boot, aut
   guideline: challenges inherit it from the base image and link one stylesheet,
   so 25 challenges from different authors read as one event. Sensible system
   font stacks keep typography fast and network-independent.
-- **Challenges are code.** Each is a directory with a `challenge.yml` manifest,
-  a `Dockerfile`, source, and — required — an automated `solution/solve.sh`.
-  Metadata syncs into CTFd via `ctfcli`; the deploy compose is generated from
-  the manifests.
+- **Challenges are code.** Each codebase/deployment is a directory with a
+  primary `challenge.yml`, a Dockerfile, source, and an automated solve. A
+  directory may add `challenge.<id>.yml` manifests for separately scored flags.
+  Metadata syncs into CTFd via `ctfcli`; deploy compose comes from the primary.
 - **CI won't let a broken challenge through.** Every pull request builds each
-  changed challenge, boots it hardened, runs its autosolve, and asserts the
-  flag comes back — and fails if the flag was ever baked into an image layer.
-- **Flags are injected at runtime.** Source uses the token `__FLAG__`; the real
-  flag lives only in `challenge.yml` and reaches the container through the
-  environment, so it never lands in a pullable image.
+  changed bundle once, then boots a fresh hardened container for every
+  autosolve and asserts its flag comes back. It also fails on image-layer leaks.
+- **Flags are injected at runtime.** Source uses `__FLAG__` or a named bundle
+  token such as `__FLAG_UART__`; the real flags live only in their manifests
+  and reach containers through the environment, never a pullable image.
 - **Two hosts, one boundary.** The scoreboard (player credentials, scores) and
   the challenge containers (attacker-controlled code) run on separate VMs on
   separate networks, so a container escape can't reach the scoreboard.

@@ -18,11 +18,24 @@ if ! ( : > /flag/.writetest ) 2>/dev/null; then
 fi
 rm -f /flag/.writetest
 
-# Root-owned, world-readable. The challenge runs as `ctf` and can read it but
-# not rewrite it. We do not chown: the container drops CAP_CHOWN. A challenge
-# that needs tighter permissions should arrange them itself.
+# Root-owned, world-readable. The challenge runs as `ctf` and can read these
+# but not rewrite them. /flag/flag.txt remains the primary compatibility path;
+# bundle entries also get stable lowercase names such as /flag/uart-debug.txt.
 printf '%s\n' "$FLAG" > /flag/flag.txt
-chmod 644 /flag/flag.txt
+FLAGS_FILE=/tmp/noco-flags.$$
+env | grep -E '^NOCO_FLAG_[A-Z0-9_]+=' > "$FLAGS_FILE" || :
+while IFS= read -r pair; do
+  variable=${pair%%=*}
+  value=${pair#*=}
+  case "$value" in
+    noco\{*\}) : ;;
+    *) echo "noco: FATAL - named flag does not match noco{...}" >&2; exit 1 ;;
+  esac
+  entry_id=$(printf '%s' "${variable#NOCO_FLAG_}" | tr 'A-Z_' 'a-z-')
+  printf '%s\n' "$value" > "/flag/${entry_id}.txt"
+done < "$FLAGS_FILE"
+rm -f "$FLAGS_FILE"
+chmod 644 /flag/*.txt
 
 if [ ! -x "$CHAL_BIN" ]; then
   echo "noco: FATAL - CHAL_BIN '$CHAL_BIN' is missing or not executable." >&2
