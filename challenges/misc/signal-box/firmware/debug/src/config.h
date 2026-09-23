@@ -1,7 +1,13 @@
 #ifndef SIGNAL_BOX_DEBUG_CONFIG_H
 #define SIGNAL_BOX_DEBUG_CONFIG_H
 
+#if defined(SIGNAL_BOX_RAM_PROTOTYPE)
+#define DEBUG_FIRMWARE_VERSION "0.2.0-rp2350-ram-prototype"
+#elif PICO_RP2350
+#define DEBUG_FIRMWARE_VERSION "0.2.0-rp2350"
+#else
 #define DEBUG_FIRMWARE_VERSION "0.1.1"
+#endif
 
 #define UART_TX_GPIO 0u
 #define UART_RX_GPIO 1u

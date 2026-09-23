@@ -1,11 +1,17 @@
 # Signal Box debug firmware
 
-Organizer-only bring-up firmware for the XIAO RP2040 signal-box hardware. It
-exercises the challenge circuitry and emits machine-readable UART markers for a
-production fixture. It contains no challenge flags and is not participant
-firmware.
+Organizer-only bring-up firmware for the XIAO RP2040 and XIAO RP2350 signal-box
+hardware. It exercises the challenge circuitry and emits machine-readable UART
+markers for a production fixture. It contains no challenge flags and is not
+participant firmware.
 
-## Build and flash
+**New XIAO RP2350 boards:** use the separate [RP2350 build and first-boot
+instructions](rp2350/README.md). One wired unit has passed both fixture WP modes
+and cold-start final acceptance; see the handoff §13.9 for operator results.
+The acceptance commands below are shared; the RP2040 build and boot narration
+below do not apply to RP2350. Keep the tester on RP2040.
+
+## RP2040 build and flash
 
 The firmware is bare-metal but uses the generated RP2040 register headers from
 a Pico SDK checkout as the source of truth. No Pico SDK libraries are linked.
@@ -24,7 +30,7 @@ not immediately after flashing.
 
 Build outputs are ignored. `make clean` removes them.
 
-## Boot narration
+## RP2040 boot narration
 
 The onboard blue LED is active-low and reports progress before UART exists:
 

@@ -1,17 +1,33 @@
 #include "config.h"
 #include "hw.h"
+#ifdef SIGNAL_BOX_SECURITY_PROFILE
+#include "security_profile.h"
+#endif
 
 #define GPIO_FUNC_UART IO_BANK0_GPIO0_CTRL_FUNCSEL_VALUE_UART0_TX
 #define GPIO_FUNC_I2C IO_BANK0_GPIO0_CTRL_FUNCSEL_VALUE_I2C0_SDA
+#if PICO_RP2350
+#define GPIO_FUNC_SIO IO_BANK0_GPIO0_CTRL_FUNCSEL_VALUE_SIOB_PROC_0
+#define DEBUG_TIMER_BASE TIMER0_BASE
+#define DEBUG_TIMER_RESET RESETS_RESET_TIMER0_BITS
+#if SYS_CLK_HZ != 125000000
+#error "The debug UART/I2C divisors require SYS_CLK_HZ=125000000"
+#endif
+#else
 #define GPIO_FUNC_SIO IO_BANK0_GPIO0_CTRL_FUNCSEL_VALUE_SIO_0
+#define DEBUG_TIMER_BASE TIMER_BASE
+#define DEBUG_TIMER_RESET RESETS_RESET_TIMER_BITS
+#endif
 
 #define RESET_BANK0_MASK \
     (RESETS_RESET_IO_BANK0_BITS | RESETS_RESET_PADS_BANK0_BITS)
 #define RESET_RUNTIME_MASK \
     (RESETS_RESET_I2C1_BITS | RESETS_RESET_SYSCFG_BITS | \
-     RESETS_RESET_TIMER_BITS | RESETS_RESET_UART0_BITS)
+     DEBUG_TIMER_RESET | RESETS_RESET_UART0_BITS)
 
+#if !PICO_RP2350
 static uint32_t xosc_attempts;
+#endif
 static uint32_t last_i2c_abort;
 static uint8_t preflight_address_map;
 static bool preflight_bus_idle;
@@ -20,9 +36,17 @@ static bool preflight_led_gpio;
 
 static void crude_delay(void)
 {
+#if PICO_RP2350
+    // SDK startup has already initialized TIMER0 and its 1 MHz tick source.
+    uint32_t start = hw_read(DEBUG_TIMER_BASE + TIMER_TIMERAWL_OFFSET);
+    while ((uint32_t)(hw_read(DEBUG_TIMER_BASE + TIMER_TIMERAWL_OFFSET) -
+                      start) < 100000u) {
+    }
+#else
     for (volatile uint32_t i = 0; i < 180000u; ++i) {
         __asm volatile ("nop");
     }
+#endif
 }
 
 static void reset_assert(uint32_t bits)
@@ -57,6 +81,10 @@ static void gpio_set_pulls(uint32_t gpio, bool up, bool down)
     value |= PADS_BANK0_GPIO0_IE_BITS;
     value &= ~(PADS_BANK0_GPIO0_OD_BITS | PADS_BANK0_GPIO0_PUE_BITS |
                PADS_BANK0_GPIO0_PDE_BITS);
+#if PICO_RP2350
+    // RP2350 pads start isolated; selecting a peripheral alone is not enough.
+    value &= ~PADS_BANK0_GPIO0_ISO_BITS;
+#endif
     if (up) {
         value |= PADS_BANK0_GPIO0_PUE_BITS;
     }
@@ -97,7 +125,7 @@ static bool gpio_get(uint32_t gpio)
 
 static void boot_led_put(bool on)
 {
-    gpio_put(BOOT_LED_GPIO, !on); // XIAO discrete LEDs are active-low.
+    gpio_put(BOOT_LED_GPIO, !on); // Blue on RP2040, yellow on RP2350; active-low.
 }
 
 static void boot_blinks(uint32_t count)
@@ -111,6 +139,8 @@ static void boot_blinks(uint32_t count)
     crude_delay();
 }
 
+#if !PICO_RP2350
+// RP2040 retains its proven custom clock path. RP2350 uses SDK startup.
 static bool xosc_init(void)
 {
     const uint32_t enable =
@@ -211,9 +241,11 @@ static bool clock_sys_init(void)
     return false;
 }
 
+#endif
+
 static uint32_t time_us(void)
 {
-    return hw_read(TIMER_BASE + TIMER_TIMELR_OFFSET);
+    return hw_read(DEBUG_TIMER_BASE + TIMER_TIMELR_OFFSET);
 }
 
 static bool timeout_expired(uint32_t start, uint32_t timeout)
@@ -804,9 +836,24 @@ static void run_fixture(void)
 
 static void print_status(void)
 {
+#ifdef SIGNAL_BOX_SECURITY_PROFILE
+    signal_box_security_check();
+    uart_puts("SECURITY PROFILE=" SIGNAL_BOX_SECURITY_PROFILE "\n");
+    uart_puts("SECURITY CRITICAL=0x");
+    uart_put_hex32(signal_box_security_critical());
+    uart_puts(" DEBUGEN=0x");
+    uart_put_hex32(signal_box_security_debugen());
+    uart_puts(" DEBUGEN_LOCK=0x");
+    uart_put_hex32(signal_box_security_debugen_lock());
+    uart_puts("\nSECURITY runtime-readback=PASS physical-debug-test=REQUIRED\n");
+#endif
+#if PICO_RP2350
+    uart_puts("STATUS CLOCK_INIT=PICO_SDK SYS_HZ=125000000 TIMER=TIMER0\n");
+#else
     uart_puts("STATUS XOSC_ATTEMPTS=");
     uart_put_u32(xosc_attempts);
     uart_putc('\n');
+#endif
     report("PREFLIGHT_I2C_IDLE_HIGH", preflight_bus_idle);
     uart_puts("STATUS I2C_SCAN_50_57=0x");
     uart_put_hex8(preflight_address_map);
@@ -840,6 +887,9 @@ static void print_help(void)
     uart_puts("  eeprom       unprotected EEPROM write/read/restore\n");
     uart_puts("  protected-rw protected write/read/restore; WP must be LOW\n");
     uart_puts("  wp-check     verify protected writes are blocked; WP must be HIGH\n");
+#ifdef SIGNAL_BOX_SECURITY_PROFILE
+    uart_puts("  bootsel  lab-only warm ROM USB handoff; no OTP writes\n");
+#endif
     uart_puts("  help\n");
 }
 
@@ -877,6 +927,17 @@ static void command_loop(void)
                 report("PROTECTED_RW_RESTORE", test_protected_eeprom_restore());
             } else if (string_equal(line, "wp-check")) {
                 report("WP_CHECK", test_eeprom_wp_high());
+#ifdef SIGNAL_BOX_SECURITY_PROFILE
+            } else if (string_equal(line, "bootsel")) {
+                uart_puts("INFO Warm BOOTSEL handoff; memory-retention test required\n");
+                uint32_t start = hw_read(DEBUG_TIMER_BASE + TIMER_TIMERAWL_OFFSET);
+                while (hw_read(UART0_BASE + UART_UARTFR_OFFSET) & UART_UARTFR_BUSY_BITS) {
+                    if ((uint32_t)(hw_read(DEBUG_TIMER_BASE + TIMER_TIMERAWL_OFFSET) - start) >= 100000u) {
+                        break;
+                    }
+                }
+                signal_box_security_bootsel();
+#endif
             } else if (string_equal(line, "help")) {
                 print_help();
             } else {
@@ -897,6 +958,13 @@ static void command_loop(void)
 
 int main(void)
 {
+#ifdef SIGNAL_BOX_SECURITY_PROFILE
+    signal_box_security_check();
+#endif
+#if PICO_RP2350
+    // This diagnostic superloop uses no interrupts, including SDK alarms.
+    __asm volatile ("cpsid i");
+#endif
     if (!reset_release(RESET_BANK0_MASK)) {
         for (;;) {
         }
@@ -904,6 +972,7 @@ int main(void)
     gpio_output_init(BOOT_LED_GPIO, true);
     boot_blinks(3u);
 
+#if !PICO_RP2350
     if (!xosc_init()) {
         for (;;) {
             boot_blinks(4u);
@@ -929,6 +998,7 @@ int main(void)
         }
     }
     boot_blinks(3u);
+#endif
 
     if (!reset_release(RESET_RUNTIME_MASK)) {
         for (;;) {
@@ -945,9 +1015,14 @@ int main(void)
 
     uart_puts("\nSIGNAL-BOX DEBUG ");
     uart_puts(DEBUG_FIRMWARE_VERSION);
+#if PICO_RP2350
+    uart_puts("\nBOOT BOARD=XIAO_RP2350 CLOCK_INIT=PICO_SDK\n");
+#else
     uart_puts("\nBOOT XOSC_ATTEMPTS=");
     uart_put_u32(xosc_attempts);
-    uart_puts("\nINFO Send 'run' from the fixture to begin destructive-restoring tests\n");
+    uart_putc('\n');
+#endif
+    uart_puts("INFO Send 'run' from the fixture to begin destructive-restoring tests\n");
 
     preflight_bus_idle = test_bus_idle();
     bool i2c_ready = i2c_configure();

@@ -1,2 +1,4 @@
 build/
+build-rp2350/
+build-rp2350-*/
 __pycache__/
