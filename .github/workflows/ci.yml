@@ -123,7 +123,17 @@ jobs:
   publish:
     name: push images
     needs: [validate, changed, autosolve, dev-stack]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # A docs/config-only push skips the autosolve matrix. `always()` lets image
+    # publication (and therefore CTFd sync) continue only when every job that
+    # actually ran succeeded.
+    if: >-
+      always() &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push' &&
+      needs.validate.result == 'success' &&
+      needs.changed.result == 'success' &&
+      needs.dev-stack.result == 'success' &&
+      (needs.autosolve.result == 'success' || needs.autosolve.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -157,3 +167,23 @@ jobs:
               docker build -q -f "$d/Dockerfile" -t "$img" .
               docker push "$img"
             done
+
+  # ----------------------------------------------------------- sync CTFd
+  sync:
+    name: sync CTFd
+    needs: [publish]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: install pinned CTFd sync tools
+        run: pip install -r deploy/scoreboard/requirements-sync.txt
+      - name: push challenges and event config
+        env:
+          CTFCLI_ACCESS_TOKEN: ${{ secrets.CTFCLI_ACCESS_TOKEN }}
+        run: make sync

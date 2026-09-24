@@ -287,9 +287,16 @@ make sync                                # challenges (create/update by name) + 
 ```
 
 This create-or-updates every challenge by name and pushes `event.yml`
-(name/description/theme, and the participation `mode`). It does **not** touch users, teams, submissions, or
-scores - verified against a live instance: participant data and a score record
-survived repeated syncs while a challenge's point value updated in place.
+(name/description/theme, and the participation `mode`). It does **not** touch
+users, teams, submissions, or scores - verified against a live instance:
+participant data and a score record survived repeated syncs while a challenge's
+point value updated in place.
+
+CI performs the same sync automatically after every successful `main` push,
+after tests and image publication. Its admin token lives in the GitHub
+`production` environment as `CTFCLI_ACCESS_TOKEN`. This does not pull/recreate
+containers on the challenge VPS; deploy changed runtime images separately with
+`make host-up ROLE=chals HOST=noco@<challenge-ip>`.
 
 Do **not** use CTFd's admin Export/Import to push updates - that snapshot
 replaces the whole instance, players included. It's a backup tool (below), not a
