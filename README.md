@@ -49,7 +49,7 @@ tools/test-challenge.sh challenges/web/haunted-brewery        # build, boot, aut
 | **`theme/`** | The look of the event. Design tokens (`tokens.css`), components (`theme.css`), header/footer partials, favicon, and the netcat banner. One palette and system-font type stack. Every challenge links `theme.bundle.css`. |
 | **`images/`** | The three base images every challenge builds `FROM`: `base-web` (nginx + runtime flag templating), `base-pwn` (socat fork-per-connection), and `theme-assets` (just the theme, for challenges with their own stack). |
 | **`challenges/`** | One directory per challenge, grouped by category. `TEMPLATE/` is the starting point. Two worked examples ship: `web/haunted-brewery` and `pwn/cellar-door`. |
-| **`deploy/`** | Two hosts. `deploy/scoreboard/` runs CTFd + MariaDB + Redis + Caddy with backups. `deploy/chals/` runs Traefik and every challenge container. |
+| **`deploy/`** | Two hosts. `deploy/scoreboard/` runs CTFd + MariaDB + Redis + Caddy with backups; `deploy/chals/` runs Traefik and every challenge; `deploy/host/` and `deploy/digitalocean/` bootstrap existing VPSes and configure their edge. |
 | **`tools/`** | Build, validate, and test scripts — the same ones CI runs. |
 | **`.github/`** | CI, code owners, and the templates for proposing and submitting challenges. |
 

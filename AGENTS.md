@@ -56,6 +56,8 @@ challenges/     One codebase/deployment bundle per directory under its category.
                 the starting point; copy it.
 deploy/chals/   Challenge host: Traefik + the generated compose + a Makefile.
 deploy/scoreboard/  Scoreboard host: CTFd + MariaDB + Redis + Caddy + backups.
+deploy/host/    Role-based bootstrap and artifact-only remote deployment.
+deploy/digitalocean/  Cloud Firewall and DNS automation for existing Droplets.
 tools/          Build, validate, and test scripts. Start here to understand CI.
 .github/        CI workflow, CODEOWNERS, PR and proposal templates.
 ```

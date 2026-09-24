@@ -36,16 +36,17 @@ _D = _derive()
 REGISTRY = "ghcr.io/nocohackers"
 TAG = "2026"
 
-# Production and local-dev differ in three ways and only three: where the image
-# comes from (pull vs build), what domain the routers match, and whether TLS is
-# on. Everything else - hardening, ports, networks - is identical, on purpose:
-# dev should fail the same way prod would.
+# Production and local-dev differ in image source, domains, TLS, and the owner
+# of their networks. Production networks are pre-created by the host bootstrap
+# so web containers have no route out and TCP egress can be filtered on-host.
+# Container hardening and published ports remain identical.
 PROD = {
     "out": ROOT / "deploy" / "chals" / "docker-compose.generated.yml",
     "domain": _D["NOCO_CHALLENGE_BASE"],
     "build": False,
     "tls": True,
     "edge_net": "noco-edge",
+    "tcp_net": "noco-isolated",
 }
 DEV = {
     "out": ROOT / "deploy" / "dev" / "docker-compose.dev.yml",
@@ -56,6 +57,7 @@ DEV = {
     "build": True,
     "tls": False,
     "edge_net": "noco-dev-edge",
+    "tcp_net": None,
 }
 
 HEADER = """\
@@ -130,7 +132,10 @@ def build_service(bundle, cfg: dict) -> tuple[str, dict] | None:
         }
         if cfg["tls"]:
             router[f"traefik.http.routers.{name}.entrypoints"] = "websecure"
-            router[f"traefik.http.routers.{name}.tls.certresolver"] = "le"
+            # The whoami router obtains one wildcard certificate. Per-host
+            # resolvers would create concurrent DNS-01 orders and race cleanup
+            # of records at the same _acme-challenge label.
+            router[f"traefik.http.routers.{name}.tls"] = "true"
         else:
             router[f"traefik.http.routers.{name}.entrypoints"] = "web"
         svc["networks"] = ["edge"]
@@ -156,16 +161,20 @@ def generate(cfg: dict) -> str:
         if built:
             services[built[0]] = built[1]
 
-    doc = {
-        "services": services,
-        "networks": {
-            # Traefik lives on `edge` and talks to web challenges.
-            "edge": {"external": True, "name": cfg["edge_net"]},
-            # tcp challenges get no shared network at all: they cannot reach
-            # each other, and they cannot reach the web challenges.
-            "isolated": {"driver": "bridge", "internal": False},
-        },
+    networks = {
+        # Traefik lives on `edge` and talks to web challenges. In production
+        # bootstrap creates this as an internal network, denying web egress.
+        "edge": {"external": True, "name": cfg["edge_net"]},
     }
+    if cfg["tcp_net"]:
+        # Published TCP ports require a normal bridge. The host's DOCKER-USER
+        # policy rejects new connections sourced from this fixed network while
+        # allowing replies to inbound player connections.
+        networks["isolated"] = {"external": True, "name": cfg["tcp_net"]}
+    else:
+        networks["isolated"] = {"driver": "bridge", "internal": False}
+
+    doc = {"services": services, "networks": networks}
     banner = HEADER if not cfg["build"] else HEADER.replace(
         "deploy/chals/generate.py", "deploy/chals/generate.py --dev")
     return banner + yaml.safe_dump(doc, sort_keys=False, width=100)

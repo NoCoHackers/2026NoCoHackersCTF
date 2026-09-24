@@ -6,6 +6,13 @@
 set -euo pipefail
 DUMP=${1:?usage: restore.sh <ctfd-db-*.sql.gz>}
 
+if [[ -r /etc/noco/backup.env ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  . /etc/noco/backup.env
+  set +a
+fi
+
 read -rp "This overwrites the live CTFd database. Type the event name to confirm: " ok
 [[ "$ok" == "nocohackers" ]] || { echo "aborted"; exit 1; }
 

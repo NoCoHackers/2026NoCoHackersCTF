@@ -221,6 +221,25 @@ class ChallengeBundleTests(unittest.TestCase):
             "NOCO_FLAG_UART": "${FLAG_MISC_DEVICE__ENTRY_UART:?missing flag}",
         })
 
+    def test_generator_uses_bootstrapped_production_tcp_network(self):
+        spec = importlib.util.spec_from_file_location(
+            "noco_generate_networks", ROOT / "deploy" / "chals" / "generate.py")
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+
+        prod = yaml.safe_load(module.generate(module.PROD))
+        self.assertEqual(prod["networks"]["isolated"], {
+            "external": True,
+            "name": "noco-isolated",
+        })
+
+        dev = yaml.safe_load(module.generate(module.DEV))
+        self.assertEqual(dev["networks"]["isolated"], {
+            "driver": "bridge",
+            "internal": False,
+        })
+
 
 if __name__ == "__main__":
     unittest.main()

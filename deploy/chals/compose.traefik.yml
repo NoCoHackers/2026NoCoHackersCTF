@@ -2,7 +2,9 @@
 # challenges attach themselves via labels as they come and go.
 services:
   traefik:
-    image: traefik:v3.3
+    # v3.6.1+ negotiates with Docker Engine 29; older Traefik releases hard-code
+    # API 1.24 and cannot discover containers on current daemons.
+    image: traefik:v3.6.7
     container_name: traefik
     restart: unless-stopped
     command:
@@ -17,6 +19,11 @@ services:
       # the *.<challenges>.<base> wildcard and we are not enumerating hostnames.
       - --certificatesresolvers.le.acme.dnschallenge=true
       - --certificatesresolvers.le.acme.dnschallenge.provider=${NOCO_DNS_PROVIDER:-digitalocean}
+      # DigitalOcean's authoritative anycast nodes briefly converge
+      # independently. Wait for them, then let ACME validate directly; lego's
+      # own all-authoritative precheck otherwise produces false timeouts.
+      - --certificatesresolvers.le.acme.dnschallenge.propagation.delaybeforechecks=60s
+      - --certificatesresolvers.le.acme.dnschallenge.propagation.disablechecks=true
       - --certificatesresolvers.le.acme.email=${NOCO_ACME_EMAIL:?set via deploy/domains.env}
       - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
       - --accesslog=true
@@ -26,10 +33,6 @@ services:
     # and live in a gitignored dns.env so the provider can change without editing
     # this file - keep dns.env in step with domain.dns_provider in event.yml.
     env_file: [dns.env]
-    environment:
-      # Pin the Docker SDK to a version the daemon accepts (its default 1.24 is
-      # rejected by newer daemons). Adjust if your host's daemon is older.
-      DOCKER_API_VERSION: "1.44"
     ports:
       - "80:80"
       - "443:443"
@@ -37,7 +40,9 @@ services:
       # Read-only: Traefik needs to see containers, not control them.
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik-acme:/letsencrypt
-    networks: [edge]
+    # `edge` is internal so web challenges cannot call out. Traefik alone also
+    # joins `egress` for ACME and DigitalOcean's DNS-01 API.
+    networks: [edge, egress]
     labels:
       traefik.enable: "false"
     security_opt: [no-new-privileges:true]
@@ -54,8 +59,9 @@ services:
       traefik.http.routers.whoami.rule: "Host(`${NOCO_PIN_HOST}`)"
       traefik.http.routers.whoami.entrypoints: "websecure"
       traefik.http.routers.whoami.tls.certresolver: "le"
-      traefik.http.routers.whoami.tls.domains[0].main: "${NOCO_CHALLENGE_BASE}"
-      traefik.http.routers.whoami.tls.domains[0].sans: "${NOCO_WILDCARD}"
+      # Only the wildcard is needed: bare chal.* is raw TCP, not HTTPS. A
+      # single DNS token also avoids concurrent writes to one TXT label.
+      traefik.http.routers.whoami.tls.domains[0].main: "${NOCO_WILDCARD}"
 
 volumes:
   traefik-acme:
@@ -64,3 +70,5 @@ networks:
   edge:
     external: true
     name: noco-edge
+  egress:
+    driver: bridge
