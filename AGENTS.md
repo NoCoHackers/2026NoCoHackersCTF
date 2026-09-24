@@ -180,6 +180,13 @@ Under the hood `sync` runs `ctf challenge install --force` per challenge (create
 token is read from the environment and never committed; `.ctf/config` holds only
 the public URL.
 
+On every successful `main` push, CI runs `make sync` after validation,
+autosolves, the full dev smoke test, and image publication. Store the token as
+`CTFCLI_ACCESS_TOKEN` in the GitHub `production` environment; environment
+protection rules can require an organizer's approval if desired. This syncs
+CTFd metadata only — publishing a new image does not recreate containers on the
+challenge VPS, which remains an explicit `make host-up ROLE=chals ...` step.
+
 **Participation mode.** `event.yml`'s `mode:` is `users` (individual players)
 or `teams`. It's a launch-time choice, not a live knob: `tools/ctfd-bootstrap.py`
 sets it at setup, and `make sync` will set it on a still-empty instance but
