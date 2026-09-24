@@ -7,6 +7,15 @@
 # lives on the box you are restoring is not a backup.
 set -euo pipefail
 
+# Cron does not read Compose's .env. Keep the root-only backup credential in a
+# predictable file so the documented cron entry works non-interactively.
+if [[ -r /etc/noco/backup.env ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  . /etc/noco/backup.env
+  set +a
+fi
+
 STAMP=$(date -u +%Y%m%dT%H%M%SZ)
 DEST=${NOCO_BACKUP_DIR:-/var/backups/noco}
 REMOTE=${NOCO_BACKUP_REMOTE:-}        # e.g. rclone remote:noco-ctf
@@ -22,7 +31,7 @@ docker exec ctfd-db mariadb-dump \
 
 echo "[$STAMP] archiving uploads"
 docker run --rm \
-  -v scoreboard_ctfd-uploads:/uploads:ro \
+  -v noco-scoreboard-ctfd-uploads:/uploads:ro \
   -v "$DEST":/out alpine \
   tar czf "/out/ctfd-uploads-$STAMP.tar.gz" -C /uploads .
 

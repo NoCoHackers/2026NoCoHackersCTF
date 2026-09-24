@@ -65,11 +65,17 @@ services:
     security_opt: [no-new-privileges:true]
 
 volumes:
+  # Explicit names keep backup/restore paths stable regardless of checkout dir.
   ctfd-uploads:
+    name: noco-scoreboard-ctfd-uploads
   db-data:
+    name: noco-scoreboard-db
   redis-data:
+    name: noco-scoreboard-redis
   caddy-data:
+    name: noco-scoreboard-caddy-data
   caddy-config:
+    name: noco-scoreboard-caddy-config
 
 networks:
   front:

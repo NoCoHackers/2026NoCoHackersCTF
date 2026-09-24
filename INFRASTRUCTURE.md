@@ -40,9 +40,11 @@ Sized for a local meetup: roughly 50 players, ~25 challenges.
       (apex = your main site)             chal.nocohackers.com:30000-30099
 ```
 
-Hetzner is the value pick (a CPX21 and a CPX41 come to roughly $15–20/month for
-the event window); DigitalOcean or Linode work identically. Prices drift —
-re-check before you commit.
+The production automation supports existing DigitalOcean Droplets directly.
+Other VPS providers still work with the host bootstrap, but their firewall and
+DNS must be configured separately. Prices drift — re-check before you commit.
+A first Droplet is one role, not a reason to collapse the boundary: provision
+the second before production traffic arrives.
 
 ### Why two hosts and not one
 
@@ -105,21 +107,30 @@ after a rebrand.
   HTTP-01 cannot issue wildcards, and a wildcard is what lets a new challenge
   appear at its own subdomain without provisioning a per-host certificate.
 
-Point DNS at the hosts (the domain's nameservers are DigitalOcean), and both
-hosts get certificates automatically once the DNS-01 token is in place.
+The parent `nocohackers.com` zone stays at the registrar. It delegates only
+`ctf.nocohackers.com` and `chal.nocohackers.com` to DigitalOcean, leaving the
+main website's apex and `www` untouched. Both hosts get certificates
+automatically after delegation propagates and the DNS-01 token is installed.
 
 ### DNS records to create
 
-Created on the `nocohackers.com` zone in DigitalOcean. **Leave the existing
-apex (`@`) and `www` records alone — those point at the main website; the CTF
-never touches them.** Add only:
+At the parent DNS provider, create three `NS` records for each child label:
 
-| Type | Name (host) | Value | Purpose |
-|------|-------------|-------|---------|
-| `A` | `ctf` | scoreboard host IPv4 | CTFd (scoreboard + landing) at `ctf.nocohackers.com` |
-| `A` | `*.chal` | challenge host IPv4 | wildcard for every web challenge (`<name>.chal.nocohackers.com`) |
-| `A` | `up.chal` | challenge host IPv4 | Traefik health / cert-pin router (`up.chal.nocohackers.com`); the wildcard also covers it, but an explicit record is harmless |
-| `A` | `chal` | challenge host IPv4 | the single host players `nc` into for raw-TCP challenges (`chal.nocohackers.com:<port>`); the `*.chal` wildcard does **not** cover this bare label, so it needs its own record |
+| Name | Values |
+|------|--------|
+| `ctf` | `ns1.digitalocean.com`, `ns2.digitalocean.com`, `ns3.digitalocean.com` |
+| `chal` | `ns1.digitalocean.com`, `ns2.digitalocean.com`, `ns3.digitalocean.com` |
+
+Do not replace the parent domain's nameservers or manually add an SOA record;
+DigitalOcean serves the child zones' SOA after the NS delegation is live.
+The automation creates these records inside the DigitalOcean child zones:
+
+| Zone | Type | Name | Value | Purpose |
+|------|------|------|-------|---------|
+| `ctf.nocohackers.com` | `A` | `@` | scoreboard host IPv4 | CTFd scoreboard and landing page |
+| `chal.nocohackers.com` | `A` | `@` | challenge host IPv4 | shared raw-TCP hostname |
+| `chal.nocohackers.com` | `A` | `*` | challenge host IPv4 | every web challenge |
+| `chal.nocohackers.com` | `A` | `up` | challenge host IPv4 | Traefik health and cert-pin router |
 
 Notes:
 
@@ -131,20 +142,19 @@ Notes:
   `chal` record above exists — the `*.chal` wildcard covers `<name>.chal` but
   not `chal` itself. No per-challenge TCP record is ever needed.
 - The **DNS-01 token** in `deploy/chals/dns.env` (`DO_AUTH_TOKEN`) must have
-  write access to the `nocohackers.com` zone, so Traefik/lego can create the
-  temporary `_acme-challenge.chal.nocohackers.com` TXT records when it issues
-  and renews the wildcard certificate. No TXT records are created by hand.
+  write access to the `chal.nocohackers.com` DigitalOcean zone, so Traefik/lego
+  can create temporary `_acme-challenge.chal.nocohackers.com` TXT records when
+  it issues and renews the wildcard certificate. No TXT records are created by
+  hand.
 - All of these hostnames derive from `event.yml`'s `domain:` block; if you
   change the base or subdomains there, re-derive with `tools/domains.py --print`
   to get the exact names to create.
 
-> **Docker API version.** Traefik's Docker provider speaks an older Docker API
-> version by default. A normal VPS daemon accepts it; a very new daemon (min API
-> ≥ 1.40) may reject it with *"client version 1.24 is too old."* If you hit that
-> on the prod host, set `DOCKER_API_VERSION` on the Traefik service (already
-> stubbed in `compose.traefik.yml`) to a version in the daemon's range, or lower
-> the daemon's `min-api-version`. Local dev sidesteps this entirely by using
-> Traefik's file provider — see AGENTS.md, "Running the whole environment locally."
+> **Docker API version.** Docker Engine 29 rejects clients fixed to API 1.24.
+> Traefik is pinned to v3.6.7 because v3.6.1+ negotiates the daemon API instead
+> of hard-coding that old version. Do not downgrade it without testing against
+> the production daemon. Local dev sidesteps this dependency by using Traefik's
+> file provider — see AGENTS.md, "Running the whole environment locally."
 
 ### Why TCP challenges don't get subdomains
 
@@ -160,9 +170,13 @@ assigns one and `tools/validate.py` rejects collisions.
   challenge host's firewall allows inbound `80/443` and `30000–30099` and
   nothing else; egress from challenge containers to the scoreboard's address is
   denied.
-- **No container egress** — challenge containers can't reach the public
-  internet, so a challenge can't call home, exfiltrate, or depend on a CDN that
-  might vanish. Vendor assets; the theme uses system font stacks.
+- **No container egress** — web challenges live on the internal `noco-edge`
+  bridge; only dual-homed Traefik joins its separate egress bridge. Published
+  TCP challenges live on fixed `172.31.0.0/24`; bridge ICC is disabled to stop
+  lateral traffic, while a persistent `DOCKER-USER` rule drops new outbound
+  connections but permits replies to inbound players. Challenge containers therefore can't call home,
+  exfiltrate, or depend on a CDN that might vanish. Vendor assets; the theme
+  uses system font stacks.
 - **Per-container hardening** — applied to every challenge by
   `deploy/chals/generate.py`, not left to authors:
   `read_only: true`, `cap_drop: ALL`, `no-new-privileges`, a `pids_limit`, a
@@ -198,29 +212,53 @@ stateful challenges. It won't, at this scale.
 
 ## Deploying
 
-### Challenge host
+### Bootstrap an existing DigitalOcean Droplet
+
+Run provider configuration from an operator machine with authenticated `doctl`.
+Restrict SSH to the organizer's current address or VPN; never silently expose it
+to the world.
 
 ```sh
-# one time
-make -C deploy/chals init          # creates the shared noco-edge network
-cp deploy/chals/dns.env.example deploy/chals/dns.env   # then add your DO_AUTH_TOKEN
+export NOCO_SSH_CIDR=198.51.100.24/32
+make do-configure ROLE=chals DROPLET_ID=123456789 IPV4=203.0.113.10
+make host-bootstrap ROLE=chals HOST=root@203.0.113.10
+make host-sync ROLE=chals HOST=noco@203.0.113.10
+```
 
-# each deploy
-deploy/chals/generate.py           # refresh compose from challenges/ (usually already committed)
-make -C deploy/chals up            # decrypt flags, pull images, start everything
-make -C deploy/chals ps            # confirm everything is healthy
+Repeat with `ROLE=scoreboard` for the second Droplet. `do-configure` attaches the
+role's Cloud Firewall and, when DigitalOcean hosts the zone, upserts only the
+CTF DNS records; it never touches the apex or `www`. If the zone is elsewhere,
+it warns and leaves DNS unchanged. `host-bootstrap` installs Docker/Compose and role dependencies,
+creates the unprivileged `noco` operator, and installs the challenge-container
+egress policy where applicable. Details and secret paths are in
+`deploy/host/README.md` and `deploy/digitalocean/README.md`.
+
+### Challenge host
+
+Before the first start, place `dns.env`, the age identity, and a read-only GHCR
+credential as described in `deploy/host/README.md`. Images are private before
+the event, so an unauthenticated `docker compose pull` is expected to fail.
+Then deploy from the operator checkout:
+
+```sh
+make host-up ROLE=chals HOST=noco@203.0.113.10
+ssh noco@203.0.113.10 'make -C /opt/noco/deploy/chals ps'
 ```
 
 Images are built and pushed by CI on merge to `main` and deployed **by tag**
 (`:2026`). Flags come from `flags.env`, decrypted on the host from the
-sops/age-encrypted `flags.enc.env`; the plaintext is never committed.
+sops/age-encrypted `flags.enc.env`; the plaintext is never committed. The host
+receives only deploy artifacts, not challenge sources or solutions.
 
 ### Scoreboard host
 
+Generate and install the scoreboard `.env`, then converge it:
+
 ```sh
-cd deploy/scoreboard
-cp .env.example .env               # set CTFD_SECRET_KEY, MYSQL_* (see below)
-docker compose up -d --build       # --build compiles the custom Caddy image
+make host-sync ROLE=scoreboard HOST=noco@203.0.113.20
+scp deploy/scoreboard/.env.example noco@203.0.113.20:/opt/noco/deploy/scoreboard/.env
+# Replace every placeholder in the remote file with generated secrets.
+make host-up ROLE=scoreboard HOST=noco@203.0.113.20
 ```
 
 The scoreboard's Caddy is a **custom image** (`images/caddy/`): stock Caddy plus
@@ -271,14 +309,20 @@ unblessed rename; see AGENTS.md.
 The scoreboard is the one piece that can't be recreated from git, so it's the
 one piece that gets backed up.
 
+Install `deploy/scoreboard/backup.env.example` as
+`/etc/noco/backup.env`, owned by root with mode `600`; its database password
+must match the scoreboard `.env`. The script loads this file itself, including
+when cron supplies no environment.
+
 ```sh
 # hourly during the event, daily otherwise (cron on the scoreboard host):
 0 * * * * /opt/noco/deploy/scoreboard/backup.sh >> /var/log/noco-backup.log 2>&1
 ```
 
-`backup.sh` dumps MariaDB and the uploads volume, keeps the last 48 locally,
-and pushes off-host if `NOCO_BACKUP_REMOTE` is set (an rclone remote). **Set
-it.** A backup that lives only on the box you're restoring is not a backup.
+`backup.sh` dumps MariaDB and the explicitly named uploads volume, keeps the
+last 48 locally, and pushes off-host if `NOCO_BACKUP_REMOTE` is set (an rclone
+remote). **Set it.** A backup that lives only on the box you're restoring is
+not a backup.
 Practice `restore.sh` against a throwaway host once before the event — an
 untested restore is a hope, not a plan.
 
@@ -311,8 +355,10 @@ Symptom → action:
 
 ## Pre-event checklist
 
-- [ ] Two VMs provisioned; challenge-host firewall limited to `80/443` +
-      `30000–30099`; egress to the scoreboard denied.
+- [ ] Two VMs provisioned; DigitalOcean Cloud Firewalls limit ingress to
+      `80/443`, challenge `30000–30099`, and SSH from the organizer/VPN CIDR.
+- [ ] Challenge web network is internal; `noco-container-firewall.service` is
+      active and a test container on `noco-isolated` cannot initiate egress.
 - [ ] DNS pointed; domain on an ACME-capable provider; wildcard cert issued
       (hit `https://up.chal.nocohackers.com`).
 - [ ] CTFd up, themed, scoring decided, rate limits on, Redis sessions on.

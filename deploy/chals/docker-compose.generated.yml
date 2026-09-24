@@ -91,11 +91,11 @@ services:
       traefik.http.routers.web-haunted-brewery.rule: Host(`brewery.chal.nocohackers.com`)
       traefik.http.services.web-haunted-brewery.loadbalancer.server.port: '8080'
       traefik.http.routers.web-haunted-brewery.entrypoints: websecure
-      traefik.http.routers.web-haunted-brewery.tls.certresolver: le
+      traefik.http.routers.web-haunted-brewery.tls: 'true'
 networks:
   edge:
     external: true
     name: noco-edge
   isolated:
-    driver: bridge
-    internal: false
+    external: true
+    name: noco-isolated

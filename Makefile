@@ -15,7 +15,7 @@ DEV         := docker compose -p $(DEV_PROJECT) \
                  --env-file deploy/dev/flags.env
 
 .PHONY: help dev dev-build dev-up dev-down dev-logs dev-ps dev-urls dev-hosts dev-smoke sync domains \
-        validate test-all base-images
+        validate test-all base-images host-bootstrap host-sync host-up do-configure
 
 help:  ## show this help
 	@grep -E '^[a-zA-Z-]+:.*?##' $(MAKEFILE_LIST) | sort | \
@@ -74,6 +74,23 @@ sync: ## push challenges + event config to CTFd (TARGET=dev for local; needs CTF
 
 base-images: ## build the three base images
 	@tools/build-base-images.sh
+
+# ---- production hosts ------------------------------------------------------
+host-bootstrap: ## prepare a VPS (ROLE=chals|scoreboard HOST=root@ip)
+	@test -n "$(ROLE)" -a -n "$(HOST)" || { echo 'usage: make host-bootstrap ROLE=chals|scoreboard HOST=root@ip' >&2; exit 2; }
+	@ssh "$(HOST)" 'bash -s -- "$(ROLE)"' < deploy/host/bootstrap.sh
+
+host-sync: ## upload one role without starting it (ROLE=... HOST=noco@ip)
+	@test -n "$(ROLE)" -a -n "$(HOST)" || { echo 'usage: make host-sync ROLE=chals|scoreboard HOST=noco@ip' >&2; exit 2; }
+	@deploy/host/deploy.sh "$(ROLE)" "$(HOST)" sync
+
+host-up: ## upload and converge one production role (ROLE=... HOST=noco@ip)
+	@test -n "$(ROLE)" -a -n "$(HOST)" || { echo 'usage: make host-up ROLE=chals|scoreboard HOST=noco@ip' >&2; exit 2; }
+	@deploy/host/deploy.sh "$(ROLE)" "$(HOST)" up
+
+do-configure: ## configure an existing Droplet's firewall/DNS (ROLE=... DROPLET_ID=... IPV4=...)
+	@test -n "$(ROLE)" -a -n "$(DROPLET_ID)" -a -n "$(IPV4)" || { echo 'usage: make do-configure ROLE=chals|scoreboard DROPLET_ID=123 IPV4=203.0.113.10' >&2; exit 2; }
+	@deploy/digitalocean/configure.sh "$(ROLE)" "$(DROPLET_ID)" "$(IPV4)"
 
 validate: ## validate every challenge manifest
 	@tools/validate.py
