@@ -10,7 +10,9 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Let production runs reach their firewall cleanup step. Superseded PR runs
+  # are safe to cancel because they never receive production credentials.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   # ---------------------------------------------------------------- lint
@@ -168,10 +170,91 @@ jobs:
               docker push "$img"
             done
 
+  # ------------------------------------------------ deploy challenge host
+  deploy-chals:
+    name: deploy challenge containers
+    needs: [publish]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      - name: install deployment SSH identity
+        env:
+          DEPLOY_KEY: ${{ secrets.CHALLENGE_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.CHALLENGE_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOY_KEY"
+          test -n "$KNOWN_HOSTS"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519
+          chmod 644 ~/.ssh/known_hosts
+      - name: identify runner address
+        id: runner
+        run: |
+          set -euo pipefail
+          ip=$(curl -4fsS --retry 3 https://api.ipify.org)
+          python3 - "$ip" <<'PY'
+          import ipaddress, sys
+          ipaddress.IPv4Address(sys.argv[1])
+          PY
+          echo "cidr=$ip/32" >> "$GITHUB_OUTPUT"
+      - name: temporarily allow runner SSH
+        env:
+          FIREWALL_ID: ${{ vars.CHALLENGE_FIREWALL_ID }}
+          RUNNER_CIDR: ${{ steps.runner.outputs.cidr }}
+        run: |
+          set -euo pipefail
+          test -n "$FIREWALL_ID"
+          doctl compute firewall add-rules "$FIREWALL_ID" \
+            --inbound-rules "protocol:tcp,ports:22,address:$RUNNER_CIDR"
+      - name: wait for SSH policy propagation
+        env:
+          CHALLENGE_HOST: ${{ vars.CHALLENGE_HOST }}
+        run: |
+          set -euo pipefail
+          test -n "$CHALLENGE_HOST"
+          for attempt in $(seq 1 18); do
+            if ssh -o BatchMode=yes -o ConnectTimeout=5 "noco@$CHALLENGE_HOST" true; then
+              exit 0
+            fi
+            echo "SSH policy not active yet ($attempt/18)"
+            sleep 5
+          done
+          echo "FATAL: SSH did not become reachable after opening the runner /32" >&2
+          exit 1
+      - name: deploy current challenge images and compose
+        env:
+          CHALLENGE_HOST: ${{ vars.CHALLENGE_HOST }}
+        run: make host-up ROLE=chals HOST="noco@$CHALLENGE_HOST"
+      - name: verify public challenge edge
+        run: |
+          set -euo pipefail
+          . deploy/domains.env
+          curl -fsS --retry 6 --retry-all-errors --retry-delay 5 \
+            "https://$NOCO_PIN_HOST/" >/dev/null
+      - name: remove runner SSH rule
+        if: always() && steps.runner.outputs.cidr != ''
+        env:
+          FIREWALL_ID: ${{ vars.CHALLENGE_FIREWALL_ID }}
+          RUNNER_CIDR: ${{ steps.runner.outputs.cidr }}
+        run: |
+          doctl compute firewall remove-rules "$FIREWALL_ID" \
+            --inbound-rules "protocol:tcp,ports:22,address:$RUNNER_CIDR" || true
+
   # ----------------------------------------------------------- sync CTFd
   sync:
     name: sync CTFd
-    needs: [publish]
+    needs: [deploy-chals]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: production

@@ -292,11 +292,12 @@ users, teams, submissions, or scores - verified against a live instance:
 participant data and a score record survived repeated syncs while a challenge's
 point value updated in place.
 
-CI performs the same sync automatically after every successful `main` push,
-after tests and image publication. Its admin token lives in the GitHub
-`production` environment as `CTFCLI_ACCESS_TOKEN`. This does not pull/recreate
-containers on the challenge VPS; deploy changed runtime images separately with
-`make host-up ROLE=chals HOST=noco@<challenge-ip>`.
+After every successful `main` push, CI publishes images, temporarily opens SSH
+from that runner's `/32`, runs the same artifact-only `host-up` deployment,
+checks the public challenge edge, closes SSH again, and only then syncs CTFd.
+Configure the GitHub `production` environment as documented in
+`deploy/host/README.md`. If container deployment fails, CTFd metadata is not
+advanced to the broken revision.
 
 Do **not** use CTFd's admin Export/Import to push updates - that snapshot
 replaces the whole instance, players included. It's a backup tool (below), not a
@@ -368,6 +369,8 @@ Symptom → action:
       active and a test container on `noco-isolated` cannot initiate egress.
 - [ ] DNS pointed; domain on an ACME-capable provider; wildcard cert issued
       (hit `https://up.chal.nocohackers.com`).
+- [ ] GitHub `production` environment has the deploy variables/secrets from
+      `deploy/host/README.md`; one `main` push has completed deploy and cleanup.
 - [ ] CTFd up, themed, scoring decided, rate limits on, Redis sessions on.
 - [ ] Backups running hourly **and pushing off-host**; a restore rehearsed.
 - [ ] Full dry run: deploy everything from a clean clone, and have an organizer
