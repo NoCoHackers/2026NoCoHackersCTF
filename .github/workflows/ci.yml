@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -131,7 +132,7 @@ jobs:
     if: >-
       always() &&
       github.ref == 'refs/heads/main' &&
-      github.event_name == 'push' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       needs.validate.result == 'success' &&
       needs.changed.result == 'success' &&
       needs.dev-stack.result == 'success' &&
@@ -174,7 +175,9 @@ jobs:
   deploy-chals:
     name: deploy challenge containers
     needs: [publish]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: production
@@ -255,7 +258,9 @@ jobs:
   sync:
     name: sync CTFd
     needs: [deploy-chals]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     environment: production
     permissions:
