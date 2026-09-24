@@ -59,9 +59,12 @@ files from rsync deletion.
 ## Automatic challenge deployment from GitHub
 
 The main CI workflow deploys the challenge host after publishing images and
-before syncing CTFd. Because GitHub-hosted runners have changing addresses, the
-job adds its public `/32` to the DigitalOcean Cloud Firewall for the duration of
-the SSH deployment and removes it in an `always()` cleanup step.
+before syncing CTFd. It runs for pushes to `main` and can be retried from
+**Actions → ci → Run workflow** with the `main` branch selected. Manual runs on
+other branches cannot publish or deploy. Because GitHub-hosted runners have
+changing addresses, the job adds its public `/32` to the DigitalOcean Cloud
+Firewall for the duration of the SSH deployment and removes it in an `always()`
+cleanup step.
 
 Create a dedicated key; do not reuse an organizer's SSH identity:
 
