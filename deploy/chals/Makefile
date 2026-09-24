@@ -35,9 +35,9 @@ check:       ## fail if the generated compose is stale (CI)
 flags.env:   ## decrypt the flag file (needs the age key on this host)
 	sops -d flags.enc.env > flags.env && chmod 600 flags.env
 
-up: init flags.env  ## pull and start everything
+up: init flags.env  ## pull, start, and wait for every challenge to become healthy
 	$(COMPOSE) pull
-	$(COMPOSE) up -d --remove-orphans
+	$(COMPOSE) up -d --remove-orphans --wait --wait-timeout 120
 
 down:        ## stop everything (scoreboard is a separate host and unaffected)
 	$(COMPOSE) down

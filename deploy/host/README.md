@@ -55,3 +55,43 @@ Install `deploy/scoreboard/backup.env.example` as `/etc/noco/backup.env` (mode
 `deploy/host/deploy.sh` accepts `sync` to upload without starting services and
 `up` to sync then converge the role. It deliberately excludes plaintext secret
 files from rsync deletion.
+
+## Automatic challenge deployment from GitHub
+
+The main CI workflow deploys the challenge host after publishing images and
+before syncing CTFd. Because GitHub-hosted runners have changing addresses, the
+job adds its public `/32` to the DigitalOcean Cloud Firewall for the duration of
+the SSH deployment and removes it in an `always()` cleanup step.
+
+Create a dedicated key; do not reuse an organizer's SSH identity:
+
+```sh
+HOST=203.0.113.10
+install -d -m 700 ~/.config/noco
+ssh-keygen -t ed25519 -N '' \
+  -C noco-github-actions-chals \
+  -f ~/.config/noco/github-actions-chals
+{ printf 'restrict '; cat ~/.config/noco/github-actions-chals.pub; } |
+  ssh noco@$HOST 'umask 077; cat >> ~/.ssh/authorized_keys'
+
+# Build a pinned known_hosts line from the host key over the already-trusted
+# organizer connection. Store the resulting line as the secret below.
+ssh root@$HOST 'cat /etc/ssh/ssh_host_ed25519_key.pub' |
+  awk -v host="$HOST" '{print host, $1, $2}'
+```
+
+Configure the GitHub **`production` environment**:
+
+| kind | name | value |
+|------|------|-------|
+| variable | `CHALLENGE_HOST` | challenge VPS IPv4 or hostname |
+| variable | `CHALLENGE_FIREWALL_ID` | ID of the `noco-chals` Cloud Firewall |
+| secret | `CHALLENGE_SSH_PRIVATE_KEY` | contents of the dedicated private key |
+| secret | `CHALLENGE_SSH_KNOWN_HOSTS` | pinned known-hosts line produced above |
+| secret | `DIGITALOCEAN_ACCESS_TOKEN` | token limited to firewall read/write |
+| secret | `CTFCLI_ACCESS_TOKEN` | CTFd admin API token used by the following sync job |
+
+Protect `main` with required reviews. A workflow revision merged to `main` can
+use the deploy key to reach an account in the Docker group, which is effectively
+root access to the challenge VPS. The temporary firewall rule narrows network
+exposure; it does not make unreviewed workflow code safe.

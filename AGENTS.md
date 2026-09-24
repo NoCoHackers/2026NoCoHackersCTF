@@ -180,12 +180,16 @@ Under the hood `sync` runs `ctf challenge install --force` per challenge (create
 token is read from the environment and never committed; `.ctf/config` holds only
 the public URL.
 
-On every successful `main` push, CI runs `make sync` after validation,
-autosolves, the full dev smoke test, and image publication. Store the token as
-`CTFCLI_ACCESS_TOKEN` in the GitHub `production` environment; environment
-protection rules can require an organizer's approval if desired. This syncs
-CTFd metadata only — publishing a new image does not recreate containers on the
-challenge VPS, which remains an explicit `make host-up ROLE=chals ...` step.
+On every successful `main` push, CI validates and autosolves, publishes images,
+deploys the challenge host, verifies its public edge, then runs `make sync`.
+The deploy job temporarily allows only its runner's `/32` through the
+DigitalOcean SSH firewall and removes that rule afterward. Configure the GitHub
+`production` environment with variables `CHALLENGE_HOST` and
+`CHALLENGE_FIREWALL_ID`, plus secrets `CHALLENGE_SSH_PRIVATE_KEY`,
+`CHALLENGE_SSH_KNOWN_HOSTS`, `DIGITALOCEAN_ACCESS_TOKEN`, and
+`CTFCLI_ACCESS_TOKEN`. Use a dedicated deploy SSH key and a DigitalOcean token
+limited to firewall access. Protect `main`: code merged there can reach the
+Docker-owning deploy account and is therefore trusted production code.
 
 **Participation mode.** `event.yml`'s `mode:` is `users` (individual players)
 or `teams`. It's a launch-time choice, not a live knob: `tools/ctfd-bootstrap.py`
