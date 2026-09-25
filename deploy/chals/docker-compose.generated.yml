@@ -60,6 +60,38 @@ services:
     - SETUID
     - SETGID
     - SETPCAP
+  web-ghostdex:
+    container_name: web-ghostdex
+    image: ghcr.io/nocohackers/chal-web-ghostdex:2026
+    environment:
+      FLAG: ${FLAG_WEB_GHOSTDEX:?missing flag}
+    restart: unless-stopped
+    read_only: true
+    tmpfs: &id002
+    - /tmp:size=64m
+    - /var/run
+    - /var/cache/nginx
+    - /srv/www:size=64m,uid=101,gid=101,mode=0755
+    security_opt:
+    - no-new-privileges:true
+    cap_drop:
+    - ALL
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 0.5
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    networks:
+    - edge
+    labels:
+      traefik.enable: 'true'
+      traefik.http.routers.web-ghostdex.rule: Host(`ghostdex.chal.nocohackers.com`)
+      traefik.http.services.web-ghostdex.loadbalancer.server.port: '8080'
+      traefik.http.routers.web-ghostdex.entrypoints: websecure
+      traefik.http.routers.web-ghostdex.tls: 'true'
   web-haunted-brewery:
     container_name: web-haunted-brewery
     image: ghcr.io/nocohackers/chal-web-haunted-brewery:2026
@@ -67,11 +99,7 @@ services:
       FLAG: ${FLAG_WEB_HAUNTED_BREWERY:?missing flag}
     restart: unless-stopped
     read_only: true
-    tmpfs:
-    - /tmp:size=64m
-    - /var/run
-    - /var/cache/nginx
-    - /srv/www:size=64m,uid=101,gid=101,mode=0755
+    tmpfs: *id002
     security_opt:
     - no-new-privileges:true
     cap_drop:
