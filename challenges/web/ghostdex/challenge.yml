@@ -1,0 +1,60 @@
+# ---------------------------------------------------------------------------
+# NoCo Hackers CTF 2026 - challenge manifest
+#
+# The top-level keys are ctfcli's schema (they get synced into CTFd verbatim).
+# The `x-noco` block is ours and drives deployment. Both are checked by
+# `tools/validate.py`, which CI runs on every pull request.
+#
+# Copy this whole directory to challenges/<category>/<your-slug>/ to start.
+# For another separately scored flag in the same codebase, add a complete
+# challenge.<id>.yml manifest; see README.md for its restricted x-noco block.
+# ---------------------------------------------------------------------------
+
+name: Ghost in the Index         # shown in CTFd; title case, no category prefix
+author: bjames                    # your GitHub handle
+category: web                     # web | pwn | rev | crypto | forensics | osint | misc
+
+description: |
+  Their character set seems broader than mine.
+
+  Connect: https://ghostdex.chal.nocohackers.com
+
+value: 100
+type: dynamic                     # dynamic scoring is the event default
+extra:
+  initial: 500
+  decay: 20                       # solves before the value bottoms out
+  minimum: 100
+
+flags:
+  - noco{9708c73a80bdfbb395f249cd78e48094}  # unique across the event
+
+tags: [beginner]
+hints: []                         # [{content: "...", cost: 50}] - organizers may add more
+
+files: []                         # paths under handout/, e.g. [handout/dump.pcap]
+
+state: hidden                     # organizers flip this to visible at kickoff
+version: "0.1"
+
+# ---------------------------------------------------------------------------
+x-noco:
+  # How this challenge is served.
+  #   web    - HTTP, routed by Traefik at <subdomain>.chal.nocohackers.com
+  #   tcp    - raw socket, published on <port> of chal.nocohackers.com
+  #   static - handout only, no running container
+  kind: web
+
+  subdomain: ghostdex             # web only; must be globally unique
+  port: null                      # tcp only; must be unique, range 30000-30099
+
+  # Resource caps. These are ceilings, not reservations. Ask for what you need;
+  # the default is enough for anything that isn't a database.
+  memory: 256m
+  cpus: "0.5"
+  pids: 128
+
+  # How CI proves the challenge works. `autosolve` must exit 0 and print the
+  # flag to stdout. This is not optional - see AGENTS.md.
+  autosolve: solution/solve.sh
+  healthcheck_path: /             # web only
