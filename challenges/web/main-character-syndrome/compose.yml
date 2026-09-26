@@ -1,0 +1,22 @@
+# Local development only. Deployment compose is generated from challenge.yml.
+#   FLAG='noco{local_test}' docker compose -f challenges/web/main-character-syndrome/compose.yml up --build
+services:
+  chal:
+    build:
+      context: ../../..
+      dockerfile: challenges/web/main-character-syndrome/Dockerfile
+    environment:
+      FLAG: "${FLAG:?set FLAG in your environment}"
+    ports:
+      - "8080:8080"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run
+      - /var/cache/nginx
+      - "/srv/www:uid=101,gid=101,mode=0755"
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    mem_limit: 128m
+    cpus: 0.5
+    pids_limit: 64

@@ -67,7 +67,7 @@ services:
       FLAG: ${FLAG_WEB_HAUNTED_BREWERY:?missing flag}
     restart: unless-stopped
     read_only: true
-    tmpfs:
+    tmpfs: &id002
     - /tmp:size=64m
     - /var/run
     - /var/cache/nginx
@@ -92,6 +92,34 @@ services:
       traefik.http.services.web-haunted-brewery.loadbalancer.server.port: '8080'
       traefik.http.routers.web-haunted-brewery.entrypoints: websecure
       traefik.http.routers.web-haunted-brewery.tls: 'true'
+  web-main-character-syndrome:
+    container_name: web-main-character-syndrome
+    image: ghcr.io/nocohackers/chal-web-main-character-syndrome:2026
+    environment:
+      FLAG: ${FLAG_WEB_MAIN_CHARACTER_SYNDROME:?missing flag}
+    restart: unless-stopped
+    read_only: true
+    tmpfs: *id002
+    security_opt:
+    - no-new-privileges:true
+    cap_drop:
+    - ALL
+    pids_limit: 64
+    mem_limit: 128m
+    cpus: 0.5
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    networks:
+    - edge
+    labels:
+      traefik.enable: 'true'
+      traefik.http.routers.web-main-character-syndrome.rule: Host(`registry.chal.nocohackers.com`)
+      traefik.http.services.web-main-character-syndrome.loadbalancer.server.port: '8080'
+      traefik.http.routers.web-main-character-syndrome.entrypoints: websecure
+      traefik.http.routers.web-main-character-syndrome.tls: 'true'
 networks:
   edge:
     external: true
