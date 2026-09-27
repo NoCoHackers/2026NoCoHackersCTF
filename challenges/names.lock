@@ -2,5 +2,6 @@
   "challenges/pwn/cellar-door": "Cellar Door",
   "challenges/pwn/municipal-connectivity-test": "Municipal Connectivity Test",
   "challenges/web/haunted-brewery": "Haunted Brewery",
-  "challenges/web/main-character-syndrome": "Main Character Syndrome"
+  "challenges/web/main-character-syndrome": "Main Character Syndrome",
+  "challenges/web/main-character-syndrome#exec": "Main Character Syndrome: The Release Job"
 }

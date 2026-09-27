@@ -2,10 +2,9 @@ name: Main Character Syndrome
 author: bjames
 category: web
 description: |
-  Old Town's night-watch registry has a container image waiting for promotion.
-  Its CI record says it came from a feature branch, and the deploy gate only
-  accepts passing builds from main. You can edit the registry listing's
-  description, but not the CI record. Get the image promoted.
+  Old Town's cache-de-spectre executable is waiting for promotion. Its CI
+  record says feature branch; the release gate demands a passing main build.
+  Upload a binary with registry metadata and get the release job to run it.
 
   Connect: https://registry.chal.nocohackers.com
 value: 100
@@ -18,16 +17,16 @@ flags:
   - noco{a_description_is_not_provenance}
 tags: [web, injection]
 hints:
-  - content: The verifier reads JSON lines. Which of its inputs should be trusted?
+  - content: Compare the verifier's record count for ordinary and unusual descriptions.
     cost: 50
-files: []
+files: [handout/cache-de-spectre]
 state: hidden
 version: "1.0"
 x-noco:
   kind: web
   subdomain: registry
   port: null
-  memory: 128m
+  memory: 256m
   cpus: "0.5"
   pids: 64
   autosolve: solution/solve.sh

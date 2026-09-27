@@ -1,0 +1,25 @@
+name: "Main Character Syndrome: The Release Job"
+author: bjames
+category: web
+description: |
+  The night watch approved a build. Now the release job runs uploaded
+  executables in a syscall-restricted jail. What can your build report?
+
+  Connect: https://registry.chal.nocohackers.com
+value: 100
+type: dynamic
+extra:
+  initial: 500
+  decay: 25
+  minimum: 100
+flags:
+  - noco{release_jail_reads_from_stdin}
+tags: [web, pwn, binary]
+hints:
+  - content: The job gives your program one input stream. It can read and write, but cannot open files.
+    cost: 75
+files: [handout/cache-de-spectre]
+state: hidden
+version: "1.0"
+x-noco:
+  autosolve: solution/solve-exec.sh

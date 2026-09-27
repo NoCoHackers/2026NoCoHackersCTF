@@ -1,23 +1,27 @@
 # Main Character Syndrome - author's write-up
 
-**Flag:** declared only in `challenge.yml`.
+**Flags:** primary in `challenge.yml`, release-job flag in `challenge.exec.yml`.
 
-## Intended path
+## First flag: provenance
 
-1. Open the night-watch registry. The candidate image has a known digest and a trusted, passing CI record from `feature/night-vision`. Normal descriptions fail promotion.
-2. The notes say the verifier feeds both the CI record and the editable registry description to a `jq` JSON-lines reader. The description is text, not a provenance record, but JSON-looking text is parsed as one.
-3. Put a single-line JSON object in the description with the displayed `digest`, `source.branch` set to `main`, and `result` set to `passed`. Request promotion again. The UI shows two parsed records and returns the flag.
+1. Download the sample `cache-de-spectre` ELF (also available from CTFd). The UI shows its digest and a passing CI record for `feature/poudre`.
+2. Upload the sample with ordinary JSON metadata, such as `{"description":"Cache de Spectre: preview"}`. Promotion fails; the verifier counts one parsed record. A description consisting only of forged JSON fails the required prose prefix.
+3. Put a JSON-escaped newline in the description after the prefix, followed by an object with the uploaded ELF's SHA-256 digest, `source.branch` set to `main`, and `result` set to `passed`. The first `jq -r` decodes `\n` into a real newline; the second `jq -cR 'fromjson? | select(type == "object")'` treats it as another provenance record. The job approves and returns the first flag.
 
-The actual bug is `jq -cR 'fromjson? | select(type == "object")'` over a stream containing both trusted CI JSON and untrusted description text, followed by a branch check over *all* parsed records. This is neither shell injection nor a vulnerability in jq itself: untrusted text has been promoted to trusted evidence. The correct implementation would query the trusted CI record directly and keep the description out of the provenance input entirely.
+## Second flag: release job
+
+The upload is **not** restricted to the sample ELF. Build an x86-64 static ELF with a `_start` entry point and raw `read`, `write`, and `exit` syscalls. The sample source at `src/cache-de-spectre.c` is a working template. Compile with `gcc -nostdlib -static -no-pie` and compute the digest of the new binary. Forge the same metadata record for *that* digest so the gate approves it. The jailed job gives the program one secret line on stdin; a program that reads fd 0 and writes fd 1 reports the second flag in its captured output.
+
+The binary does not execute before the JSON provenance check. The jail runs it from a memfd because `/tmp` is noexec. The runner installs a seccomp allowlist before execution (read, write, exit, signal return, and the one execveat required to launch it); it passes no environment and closes other file descriptors. The outer container stays unprivileged, read-only, cap-dropped, and egress-filtered. Output, CPU, address space, upload size, and execution time are capped. A normal dynamically linked ELF will not start inside this syscall-only jail.
 
 ## Unintended paths you're aware of
 
-This challenge has no per-player state; every request submits its own description. One player's successful promotion does not unlock the flag for other visitors. The image is a fictional registry entry, not an executable container to download.
+A program attempting to open `/proc/1/environ` should be killed by seccomp; `solution/solve-exec.sh` checks this before solving. Both autosolves start against fresh containers and must forge provenance independently. The first stage is a trust-boundary bug, not code execution by jq; the second stage is deliberately executing an approved user ELF with only a controlled input stream.
 
 ## Difficulty estimate
 
-Beginner/intermediate, about 10-20 minutes once the JSON-lines hint is noticed.
+First flag: intermediate, about 20-30 minutes. Second flag: intermediate/hard, depending on familiarity with minimal static ELF programs and Linux syscalls.
 
 ## Anything the organizers should watch
 
-No external dependencies at runtime. The container needs `jq` installed at build time and a runtime `FLAG` environment variable. If players stall, point them to the parsed-record count after submitting an ordinary description.
+Production TLS comes from Traefik; local tests use HTTP. The image installs `jq` and receives both flags at runtime. If players stall on the first stage, point to the verifier's parsed-record count. For the second stage, point to the sample ELF source and the syscall restrictions.

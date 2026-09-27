@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Promote image · old-town/lantern-cam</title>
+<title>Promote cache-de-spectre · Old Town CI</title>
 <link rel="stylesheet" href="/theme/theme.bundle.css">
 <link rel="stylesheet" href="/registry.css">
 <link rel="icon" href="/theme/favicon.svg" type="image/svg+xml">
@@ -14,63 +14,46 @@
   <span class="noco-nav__spacer"></span>
   <a href="https://ctf.nocohackers.com/challenges">Scoreboard</a>
 </header>
-<main class="noco-shell pipeline">
-  <nav class="pipeline-breadcrumb" aria-label="Breadcrumb">old-town <span>/</span> <strong>lantern-cam</strong> <span>/</span> Actions</nav>
-  <div class="pipeline-heading">
-    <div>
-      <h1>Promote image <span class="run-badge %%STATE_CLASS%%">%%RUN_STATE%%</span></h1>
-      <p>Workflow run #47 · <code>feature/night-vision</code> · manually triggered</p>
+<main class="noco-shell registry">
+  <p class="breadcrumb">old-town / cache-de-spectre / Actions</p>
+  <h1>Promote cache-de-spectre</h1>
+  <p class="subtitle">Workflow run #47 · feature/poudre · waiting for review</p>
+
+  <section class="panel" aria-labelledby="artifact-heading">
+    <div class="panel-head"><h2 id="artifact-heading">Build artifact</h2><span>1 file</span></div>
+    <div class="panel-body artifact-row">
+      <div><strong>cache-de-spectre</strong><small>Linux executable · candidate from feature/poudre</small></div>
+      <a href="/artifact/cache-de-spectre" download>Download artifact</a>
     </div>
-  </div>
-  <div class="pipeline-layout">
-    <aside class="pipeline-sidebar" aria-label="Workflow navigation">
-      <h2>Jobs</h2>
-      <div class="pipeline-selected"><span aria-hidden="true">●</span> promotion-check</div>
-      <h2>Artifact</h2>
-      <p><code>old-town/lantern-cam:pr-47</code></p>
-    </aside>
-    <div class="pipeline-main">
-      <section class="pipeline-panel" aria-labelledby="job-title">
-        <div class="pipeline-panel__head"><h2 id="job-title">promotion-check</h2><span>3 steps</span></div>
-        <ol class="pipeline-steps">
-          <li><span class="step-icon step-ok" aria-hidden="true">✓</span><div>Build image <small>Completed · feature/night-vision</small></div></li>
-          <li><span class="step-icon step-ok" aria-hidden="true">✓</span><div>Publish image <small>Completed · pr-47</small></div></li>
-          <li><span class="step-icon %%STEP_CLASS%%" aria-hidden="true">%%STEP_ICON%%</span><div>Verify provenance <small>%%STEP_MESSAGE%%</small></div></li>
-        </ol>
-      </section>
+    <dl class="details">
+      <div><dt>SHA-256</dt><dd><code>%%DIGEST%%</code></dd></div>
+      <div><dt>CI result</dt><dd><span class="success">Passed</span> on <code>feature/poudre</code></dd></div>
+    </dl>
+    <details class="raw"><summary>View raw CI record</summary><pre><code>%%PROVENANCE%%</code></pre></details>
+  </section>
 
-      <section class="pipeline-panel" aria-labelledby="provenance-title">
-        <div class="pipeline-panel__head"><h2 id="provenance-title">CI provenance</h2><span>Read-only</span></div>
-        <dl class="pipeline-details">
-          <div><dt>Source branch</dt><dd><code>feature/night-vision</code></dd></div>
-          <div><dt>Build result</dt><dd><span class="pipeline-success">Passed</span></dd></div>
-          <div><dt>Image digest</dt><dd><code>%%DIGEST%%</code></dd></div>
-        </dl>
-        <details class="pipeline-raw"><summary>View raw record</summary><pre><code>%%PROVENANCE%%</code></pre></details>
-      </section>
-
-      <section class="pipeline-panel" aria-labelledby="metadata-title">
-        <div class="pipeline-panel__head"><h2 id="metadata-title">Registry metadata</h2><span>Editable</span></div>
-        <div class="pipeline-panel__body">
-          <p>You can change the image description, but not its CI provenance. Promotion requires a passing build from <code>main</code>.</p>
-          <form method="post" action="/promote#output">
-            <label for="description">Image description</label>
-            <textarea id="description" name="description" rows="5" maxlength="4096" spellcheck="false">%%DESCRIPTION%%</textarea>
-            <button class="noco-btn" type="submit">Run promotion check</button>
-          </form>
-        </div>
-      </section>
-
-      <section id="output" class="pipeline-panel" aria-labelledby="output-title">
-        <div class="pipeline-panel__head"><h2 id="output-title">Job output</h2><span>promotion-check</span></div>
-        <div class="pipeline-output" aria-live="polite">%%STATUS%%</div>
-        <details class="pipeline-raw pipeline-log">
-          <summary>Verifier details</summary>
-          <div><p>The job sends the CI record and registry description to a <code>jq</code> JSON-lines reader. Non-JSON lines are skipped.</p>%%AUDIT%%</div>
-        </details>
-      </section>
+  <section class="panel" aria-labelledby="review-heading">
+    <div class="panel-head"><h2 id="review-heading">Promotion check</h2><span>Manual run</span></div>
+    <div class="panel-body">
+      <p>Upload a small Linux executable with its registry metadata. The download above is a sample build; you can submit your own. Only builds from <code>main</code> reach the jailed release job.</p>
+      <form method="post" action="/review#output" enctype="multipart/form-data">
+        <label for="binary">Executable (x86-64 ELF)</label>
+        <input id="binary" name="binary" type="file" required>
+        <label for="metadata">Metadata JSON</label>
+        <textarea id="metadata" name="metadata" rows="5" spellcheck="false" required>%%METADATA%%</textarea>
+        <p class="field-note">The description must begin with <code>Cache de Spectre: </code></p>
+        <button class="noco-btn" type="submit">Run promotion check</button>
+      </form>
     </div>
-  </div>
+  </section>
+
+  <section id="output" class="panel" aria-labelledby="output-heading">
+    <div class="panel-head"><h2 id="output-heading">Job output</h2><span>verify-provenance</span></div>
+    <div class="panel-body" role="status">%%STATUS%%</div>
+    <details class="raw"><summary>Verifier log</summary>
+      <div class="log"><p>CI record and registry description enter a <code>jq</code> JSON-lines reader. Non-JSON lines are skipped.</p>%%AUDIT%%</div>
+    </details>
+  </section>
 </main>
 <footer class="noco-footer">
   <span>NoCo Hackers CTF 2026 &middot; Fort Collins, Colorado</span>
