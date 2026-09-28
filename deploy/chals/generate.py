@@ -9,8 +9,8 @@ Generate deploy/chals/docker-compose.generated.yml from challenge bundles.
 The generated compose is the single source of truth for what runs on the
 challenge host. Nobody hand-edits it; change a bundle manifest and re-run.
 
-Flags are NOT written here. They come from deploy/chals/flags.env, which is
-sops/age-encrypted in the repo and decrypted on the host at deploy time.
+Runtime flag environments are generated from the same manifests by
+``python3 tools/chalbundle.py env`` and synced separately as gitignored files.
 """
 from __future__ import annotations
 
