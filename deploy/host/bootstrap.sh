@@ -6,7 +6,6 @@ set -euo pipefail
 ROLE=${1:-}
 DEPLOY_USER=${NOCO_DEPLOY_USER:-noco}
 INSTALL_ROOT=${NOCO_INSTALL_ROOT:-/opt/noco}
-SOPS_VERSION=${SOPS_VERSION:-3.9.4}
 
 fatal() {
   echo "FATAL: $*" >&2
@@ -59,26 +58,7 @@ if [[ -s /root/.ssh/authorized_keys && ! -s /home/$DEPLOY_USER/.ssh/authorized_k
 fi
 
 if [[ $ROLE == chals ]]; then
-  apt-get install -y age iptables
-
-  if ! command -v sops >/dev/null 2>&1; then
-    arch=$(dpkg --print-architecture)
-    case "$arch" in
-      amd64|arm64) ;;
-      *) fatal "no pinned sops package for architecture $arch" ;;
-    esac
-    tmp=$(mktemp --suffix=.deb)
-    trap 'rm -f "$tmp"' EXIT
-    curl -fsSL \
-      "https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/sops_${SOPS_VERSION}_${arch}.deb" \
-      -o "$tmp"
-    dpkg -i "$tmp"
-    rm -f "$tmp"
-    trap - EXIT
-  fi
-
-  install -d -m 0700 -o "$DEPLOY_USER" -g "$DEPLOY_USER" \
-    "/home/$DEPLOY_USER/.config/sops/age"
+  apt-get install -y iptables
 
   # Web challenges use an internal bridge shared only with Traefik. TCP
   # challenges need a normal bridge for published ports, so DOCKER-USER drops
@@ -138,9 +118,9 @@ EOF
 if [[ $ROLE == chals ]]; then
   cat <<EOF
 Before the first start, install:
-  /home/$DEPLOY_USER/.config/sops/age/keys.txt  (mode 600)
   $INSTALL_ROOT/deploy/chals/dns.env            (mode 600)
 And authenticate Docker to private GHCR packages with a read-only token.
+The generated flags.env is synced from challenge manifests during deployment.
 EOF
 else
   cat <<EOF

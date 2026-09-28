@@ -116,9 +116,9 @@ This is the single most important mechanic in the repo, so it's spelled out.
   Flags never touch an image layer.
 - `base-pwn` writes the primary to `/flag/flag.txt` and named bundle flags to
   `/flag/<id>.txt`, root-owned and readable by the `ctf` user.
-- On the host, flags come from `deploy/chals/flags.env`, which is decrypted
-  (sops/age) from `flags.enc.env` at deploy time. The plaintext is never
-  committed — it's in `.gitignore`.
+- On the host, `deploy/chals/flags.env` is generated from the challenge
+  manifests during deployment, synced as a mode-600 artifact, and kept out of
+  git by `.gitignore`. The manifests are the single source of truth.
 - CI enforces all of this: `tools/validate.py` fails if a flag literal appears
   anywhere in the source outside `challenge.yml`, and `tools/test-challenge.sh`
   greps the built image's filesystem and history for the flag.

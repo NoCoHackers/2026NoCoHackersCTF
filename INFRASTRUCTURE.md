@@ -235,8 +235,8 @@ egress policy where applicable. Details and secret paths are in
 
 ### Challenge host
 
-Before the first start, place `dns.env`, the age identity, and a read-only GHCR
-credential as described in `deploy/host/README.md`. Images are private before
+Before the first start, place `dns.env` and a read-only GHCR credential as
+described in `deploy/host/README.md`. Images are private before
 the event, so an unauthenticated `docker compose pull` is expected to fail.
 Then deploy from the operator checkout:
 
@@ -246,9 +246,10 @@ ssh noco@203.0.113.10 'make -C /opt/noco/deploy/chals ps'
 ```
 
 Images are built and pushed by CI on merge to `main` and deployed **by tag**
-(`:2026`). Flags come from `flags.env`, decrypted on the host from the
-sops/age-encrypted `flags.enc.env`; the plaintext is never committed. The host
-receives only deploy artifacts, not challenge sources or solutions.
+(`:2026`). The operator checkout generates `deploy/chals/flags.env` directly
+from the challenge manifests during deployment, then syncs that mode-600 file
+to the host. It remains gitignored; the host receives only deploy artifacts,
+not challenge sources or solutions.
 
 ### Scoreboard host
 
