@@ -4,7 +4,7 @@ COMPOSE = docker compose -f compose.traefik.yml -f docker-compose.generated.yml 
 EDGE_SUBNET = 172.30.0.0/24
 TCP_SUBNET  = 172.31.0.0/24
 
-.PHONY: help init generate check up down restart logs ps pull reset-one
+.PHONY: help init generate check flags.env up down restart logs ps pull reset-one
 help:
 	@grep -E '^[a-z-]+:.*?##' $(MAKEFILE_LIST) | sed 's/:.*##/\t/' | column -t -s "$$(printf '\t')"
 
@@ -32,8 +32,16 @@ generate:    ## regenerate docker-compose.generated.yml from challenges/
 check:       ## fail if the generated compose is stale (CI)
 	./generate.py --check
 
-flags.env:   ## decrypt the flag file (needs the age key on this host)
-	sops -d flags.enc.env > flags.env && chmod 600 flags.env
+flags.env:   ## generate flags from manifests (or verify the synced artifact on-host)
+	@set -eu; \
+	if [ -d ../../challenges ]; then \
+	  tmp=flags.env.tmp; trap 'rm -f "$$tmp"' EXIT; \
+	  python3 ../../tools/chalbundle.py env > "$$tmp"; \
+	  chmod 600 "$$tmp"; mv "$$tmp" flags.env; \
+	else \
+	  test -s flags.env || { echo 'FATAL: flags.env is missing; run make host-sync from the repository checkout' >&2; exit 1; }; \
+	  chmod 600 flags.env; \
+	fi
 
 up: init flags.env  ## pull, start, and wait for every challenge to become healthy
 	$(COMPOSE) pull
