@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>I-25 Rampage · NoCo Hackers CTF 2026</title>
+<link rel="stylesheet" href="/theme/theme.bundle.css">
+<link rel="icon" href="/theme/favicon.svg" type="image/svg+xml">
+<style>
+  main { max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
+  .game { display: grid; grid-template-columns: minmax(250px, 1fr) 220px; gap: 1.5rem; align-items: start; }
+  canvas { width: 100%; aspect-ratio: 1; background: #111a19; border: 1px solid #52756b; image-rendering: pixelated; }
+  .game-window { position: relative; }
+  .game-window canvas { display: block; }
+  .hud { position: absolute; top: .5rem; left: .5rem; right: .5rem; display: flex; flex-wrap: wrap; justify-content: space-between; gap: .25rem .75rem; padding: .4rem .6rem; background: #111a19dd; color: #fff; font-size: .8rem; pointer-events: none; }
+  .scores { padding-left: 1.5rem; }
+  .scores li { margin: .65rem 0; }
+  .status { min-height: 1.5em; }
+  @media (max-width: 620px) { .game { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header class="noco-nav">
+  <a class="noco-nav__mark" href="https://ctf.nocohackers.com">NOCO<b>HACKERS</b><span class="noco-nav__year">CTF 2026</span></a>
+  <span class="noco-nav__spacer"></span>
+  <a href="https://ctf.nocohackers.com/challenges">Scoreboard</a>
+</header>
+<div class="noco-shell">
+  <div class="noco-chal-head"><p class="noco-eyebrow">WEB · OLD TOWN ARCADE</p><h1>I-25 Rampage</h1></div>
+  <main>
+    <p>Traffic never lets up on this stretch of I-25. Dodge the cars and grab the fuel and bonus tokens.</p>
+    <div class="game">
+      <section>
+        <div class="game-window">
+          <canvas id="road" width="400" height="400" aria-label="Endless road game"></canvas>
+          <div class="hud">
+            <span>Score: <strong id="score">0</strong></span>
+            <span>Laser: <span id="laser">Ready — press ↑</span></span>
+          </div>
+        </div>
+        <p class="status" id="status" aria-live="polite">Press Space to start.</p>
+      </section>
+      <section>
+        <h2>Your top 3</h2>
+        <ol class="scores" id="scores"></ol>
+      </section>
+    </div>
+  </main>
+</div>
+<footer class="noco-footer"><span>NoCo Hackers CTF 2026 · Fort Collins, Colorado</span><span class="noco-footer__spacer"></span><span>Something's loose in Old Town.</span></footer>
+<script>
+(() => {
+  const canvas = document.querySelector('#road'), ctx = canvas.getContext('2d');
+  const scoreText = document.querySelector('#score'), status = document.querySelector('#status');
+  const laserText = document.querySelector('#laser');
+  const lanes = [90, 200, 310], playerY = 320, items = {fuel: 10, bonus: 25};
+  let laserUntil = 0, laserReadyAt = 0;
+
+  function updateLaser() {
+    const now = performance.now();
+    if (now < laserUntil) {
+      cars = cars.filter(car => car.lane !== lane || car.y > playerY);
+      laserText.textContent = `Firing — ${Math.ceil((laserUntil - now) / 1000)}s`;
+    } else if (now < laserReadyAt) {
+      laserText.textContent = `Recharging — ${Math.ceil((laserReadyAt - now) / 1000)}s`;
+    } else {
+      laserText.textContent = 'Ready — press ↑';
+    }
+  }
+  let lane, cars, pickups, collected, score, roadOffset = 0, tickTimer, spawnTimer, pickupTimer;
+  let running = false, submitting = false;
+
+  function draw() {
+    ctx.fillStyle = '#263b34'; ctx.fillRect(0, 0, 400, 400);
+    ctx.fillStyle = '#333638'; ctx.fillRect(40, 0, 320, 400);
+    ctx.strokeStyle = '#d7c88b'; ctx.lineWidth = 4; ctx.setLineDash([24, 20]);
+    for (const x of [147, 253]) { ctx.beginPath(); ctx.moveTo(x, -40 + roadOffset); ctx.lineTo(x, 440); ctx.stroke(); }
+    ctx.setLineDash([]);
+    if (running && performance.now() < laserUntil) {
+      ctx.fillStyle = '#ff5277'; ctx.fillRect(lanes[lane] - 5, 0, 10, playerY);
+      ctx.fillStyle = '#fff0f3'; ctx.fillRect(lanes[lane] - 2, 0, 4, playerY);
+    }
+    for (const car of cars) {
+      ctx.fillStyle = '#d85b48'; ctx.fillRect(lanes[car.lane] - 24, car.y, 48, 62);
+    }
+    for (const pickup of pickups) {
+      ctx.fillStyle = pickup.type === 'bonus' ? '#e8bd54' : '#91c9a6';
+      ctx.beginPath(); ctx.arc(lanes[pickup.lane], pickup.y, 12, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = '#78bfe2'; ctx.fillRect(lanes[lane] - 24, playerY, 48, 62);
+  }
+  function finish() {
+    running = false; clearInterval(tickTimer); clearInterval(spawnTimer); clearInterval(pickupTimer);
+    laserUntil = 0; laserReadyAt = 0; laserText.textContent = 'Ready next run'; draw();
+    status.textContent = 'Wrecked. Submitting your haul…';
+    submitRun();
+  }
+  function tick() {
+    roadOffset = (roadOffset + 8) % 44;
+    cars.forEach(car => car.y += 5);
+    pickups.forEach(pickup => pickup.y += 5);
+    cars = cars.filter(car => car.y < 410);
+    pickups = pickups.filter(pickup => pickup.y < 410);
+    updateLaser();
+    if (cars.some(car => car.lane === lane && car.y + 62 >= playerY && car.y <= playerY + 62)) return finish();
+    pickups = pickups.filter(pickup => {
+      if (pickup.lane === lane && pickup.y + 12 >= playerY && pickup.y <= playerY + 62) {
+        collected[pickup.type]++; score += items[pickup.type]; scoreText.textContent = score;
+        return false;
+      }
+      return true;
+    });
+    draw();
+  }
+  function startGame() {
+    if (running || submitting) return;
+    lane = 1; cars = []; pickups = []; collected = {fuel: 0, bonus: 0}; score = 0;
+    laserUntil = 0; laserReadyAt = 0; updateLaser();
+    scoreText.textContent = '0'; status.textContent = 'Stay sharp.'; running = true; draw();
+    tickTimer = setInterval(tick, 50);
+    spawnTimer = setInterval(() => {
+      const nextLane = Math.floor(Math.random() * 3);
+      const occupied = new Set(cars.map(car => car.lane));
+      // Keep one whole lane clear until the existing traffic has passed.
+      if (occupied.size === 2 && !occupied.has(nextLane)) return;
+      cars.push({lane: nextLane, y: -70});
+    }, 900);
+    pickupTimer = setInterval(() => {
+      if (Math.random() < .5) pickups.push({lane: Math.floor(Math.random() * 3), y: -20, type: Math.random() < .7 ? 'fuel' : 'bonus'});
+    }, 5000);
+  }
+  async function signRun(body) {
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      'raw', encoder.encode('i25-road-crew-dispatch-2026'),
+      {name: 'HMAC', hash: 'SHA-256'}, false, ['sign']
+    );
+    const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(body));
+    return Array.from(new Uint8Array(signature), byte => byte.toString(16).padStart(2, '0')).join('');
+  }
+  async function submitRun() {
+    submitting = true;
+    try {
+      if (!globalThis.crypto?.subtle) throw new Error('Score submission requires HTTPS or localhost.');
+      const body = JSON.stringify({pickups: collected});
+      const signature = await signRun(body);
+      const response = await fetch('/api/crash', {
+        method: 'POST', headers: {'Content-Type': 'application/json', 'X-Run-Signature': signature},
+        body
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Submission failed.');
+      scoreText.textContent = result.score;
+      renderScores(result.scores);
+      status.textContent = result.flag ? `First place! ${result.flag}` : `Crash score: ${result.score}. Press Space to run it back.`;
+    } catch (error) {
+      status.textContent = `${error.message} Press Space to try again.`;
+    } finally { submitting = false; }
+  }
+  function renderScores(scores) {
+    const list = document.querySelector('#scores'); list.replaceChildren();
+    scores.forEach(entry => { const item = document.createElement('li'); item.textContent = `${entry.name}: ${entry.score}`; list.append(item); });
+  }
+  document.addEventListener('keydown', event => {
+    if (event.code === 'Space') {
+      event.preventDefault(); if (!running && !submitting && !event.repeat) startGame(); return;
+    }
+    if (!running) return;
+    if (event.code === 'ArrowUp') {
+      event.preventDefault();
+      const now = performance.now();
+      if (!event.repeat && now >= laserReadyAt) {
+        laserUntil = now + 3000;
+        laserReadyAt = laserUntil + 9000;
+        updateLaser(); draw();
+      }
+      return;
+    }
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      event.preventDefault(); lane = Math.max(0, Math.min(2, lane + (event.key === 'ArrowLeft' ? -1 : 1))); updateLaser(); draw();
+    }
+  });
+  fetch('/api/leaderboard').then(response => response.json()).then(data => renderScores(data.scores));
+})();
+</script>
+</body>
+</html>

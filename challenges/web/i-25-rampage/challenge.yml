@@ -1,0 +1,35 @@
+name: I-25 Rampage
+author: NoCo Hackers
+category: web
+
+description: |
+  The road out of Old Town stretches on forever, and the traffic has no patience.
+  Dodge the cars, collect what you can, and see how long you last.
+
+  Connect: https://i25.chal.nocohackers.com
+
+value: 100
+type: dynamic
+extra:
+  initial: 500
+  decay: 20
+  minimum: 100
+
+flags:
+  - noco{c32b68625346fe84a3711d2c5fa72091}
+
+tags: [beginner]
+hints: []
+files: []
+state: hidden
+version: "0.1"
+
+x-noco:
+  kind: web
+  subdomain: i25
+  port: null
+  memory: 256m
+  cpus: "0.5"
+  pids: 128
+  autosolve: solution/solve.sh
+  healthcheck_path: /
