@@ -1,0 +1,15 @@
+# Local development only. Deployment compose is generated from challenge.yml.
+services:
+  chal:
+    build:
+      context: ../..
+      dockerfile: challenges/web/i-25-rampage/Dockerfile
+    environment:
+      FLAG: "${FLAG:?set FLAG in your environment}"
+    ports:
+      - "8080:8080"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
