@@ -1,4 +1,4 @@
-# Secrets. flags.env is decrypted on the host from flags.enc.env.
+# Runtime flag environments are generated from manifests and never committed.
 deploy/chals/flags.env
 deploy/scoreboard/.env
 *.key

@@ -30,13 +30,12 @@ ssh "$TARGET" "mkdir -p '$REMOTE_ROOT/deploy'"
 rsync -az --relative "$ROOT/./deploy/domains.env" "$TARGET:$REMOTE_ROOT/"
 
 if [[ $ROLE == chals ]]; then
+  make -C "$ROOT/deploy/chals" flags.env
   rsync -az --delete \
-    --exclude dns.env --exclude flags.env --exclude flags.enc.env \
+    --exclude dns.env --exclude flags.env \
     "$ROOT/deploy/chals/" "$TARGET:$REMOTE_ROOT/deploy/chals/"
-  if [[ -f $ROOT/deploy/chals/flags.enc.env ]]; then
-    rsync -az "$ROOT/deploy/chals/flags.enc.env" \
-      "$TARGET:$REMOTE_ROOT/deploy/chals/flags.enc.env"
-  fi
+  rsync -az --chmod=F600 "$ROOT/deploy/chals/flags.env" \
+    "$TARGET:$REMOTE_ROOT/deploy/chals/flags.env"
 else
   rsync -az --delete \
     --exclude .env \
@@ -55,8 +54,8 @@ if [[ $ROLE == chals ]]; then
       echo 'FATAL: create $REMOTE_ROOT/deploy/chals/dns.env from dns.env.example' >&2
       exit 1
     }
-    test -s '$REMOTE_ROOT/deploy/chals/flags.enc.env' || {
-      echo 'FATAL: deploy/chals/flags.enc.env is missing locally and remotely' >&2
+    test -s '$REMOTE_ROOT/deploy/chals/flags.env' || {
+      echo 'FATAL: generated deploy/chals/flags.env is missing; rerun host-sync' >&2
       exit 1
     }
     make -C '$REMOTE_ROOT/deploy/chals' up

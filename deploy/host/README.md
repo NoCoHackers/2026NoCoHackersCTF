@@ -19,13 +19,9 @@ Before `host-up`, install the role's secrets.
 ## Challenge host
 
 ```sh
-# Local: commit the real sops-encrypted file first.
-test -s deploy/chals/flags.enc.env
-
-# Remote: DNS-01 token, age identity, and private GHCR authentication.
+# Remote: DNS-01 token and private GHCR authentication.
 scp deploy/chals/dns.env.example noco@203.0.113.10:/opt/noco/deploy/chals/dns.env
-scp keys.txt noco@203.0.113.10:~/.config/sops/age/keys.txt
-ssh noco@203.0.113.10 'chmod 600 /opt/noco/deploy/chals/dns.env ~/.config/sops/age/keys.txt'
+ssh noco@203.0.113.10 'chmod 600 /opt/noco/deploy/chals/dns.env'
 ssh noco@203.0.113.10 'docker login ghcr.io -u YOUR_GITHUB_USER'
 
 make host-up ROLE=chals HOST=noco@203.0.113.10

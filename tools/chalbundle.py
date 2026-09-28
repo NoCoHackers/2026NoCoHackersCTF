@@ -185,8 +185,17 @@ def main() -> int:
                 if bundle.directory.name == "TEMPLATE" or bundle.x.get("kind") == "static":
                     continue
                 for entry in bundle.entries:
-                    if entry.flag:
-                        print(f"{host_flag_var(bundle, entry)}={entry.flag}")
+                    flags = entry.data.get("flags")
+                    if isinstance(flags, str):
+                        flag = flags
+                    elif isinstance(flags, list) and len(flags) == 1 and isinstance(flags[0], str):
+                        flag = flags[0]
+                    else:
+                        raise BundleError(
+                            f"{entry.manifest}: runnable manifest must declare exactly one flag")
+                    if not flag:
+                        raise BundleError(f"{entry.manifest}: flag must not be empty")
+                    print(f"{host_flag_var(bundle, entry)}={flag}")
     except BundleError as exc:
         print(f"chalbundle: {exc}", file=sys.stderr)
         return 1
