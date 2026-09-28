@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>slithery little snake · NoCo Hackers CTF 2026</title>
+<link rel="stylesheet" href="/theme/theme.bundle.css">
+<link rel="icon" href="/theme/favicon.svg" type="image/svg+xml">
+<style>
+  main { max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
+  .game { display: grid; grid-template-columns: minmax(250px, 1fr) 220px; gap: 1.5rem; align-items: start; }
+  canvas { width: 100%; aspect-ratio: 1; background: #111a19; border: 1px solid #52756b; image-rendering: pixelated; }
+  .scores { padding-left: 1.5rem; }
+  .scores li { margin: .65rem 0; }
+  .status { min-height: 1.5em; }
+  @media (max-width: 620px) { .game { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header class="noco-nav">
+  <a class="noco-nav__mark" href="https://ctf.nocohackers.com">NOCO<b>HACKERS</b><span class="noco-nav__year">CTF 2026</span></a>
+  <span class="noco-nav__spacer"></span>
+  <a href="https://ctf.nocohackers.com/challenges">Scoreboard</a>
+</header>
+<div class="noco-shell">
+  <div class="noco-chal-head"><p class="noco-eyebrow">WEB · OLD TOWN ARCADE</p><h1>slithery little snake</h1></div>
+  <main>
+    <p>Guide your snake with the arrow keys. Eat apples and avoid the walls.</p>
+    <div class="game">
+      <section>
+        <canvas id="board" width="400" height="400" aria-label="Snake game board"></canvas>
+        <p>Score: <strong id="score">0</strong></p>
+        <p class="status" id="status" aria-live="polite"></p>
+      </section>
+      <section>
+        <h2>Your top 3</h2>
+        <ol class="scores" id="scores"></ol>
+      </section>
+    </div>
+  </main>
+</div>
+<footer class="noco-footer"><span>NoCo Hackers CTF 2026 · Fort Collins, Colorado</span><span class="noco-footer__spacer"></span><span>Something's loose in Old Town.</span></footer>
+<script>
+(() => {
+  const canvas = document.querySelector('#board'), ctx = canvas.getContext('2d');
+  const scoreText = document.querySelector('#score'), status = document.querySelector('#status');
+  const cells = 20, size = 20;
+  let snake, food, direction, nextDirection, score, timer, running = false;
+
+  function placeFood() {
+    do { food = {x: Math.floor(Math.random() * cells), y: Math.floor(Math.random() * cells)}; }
+    while (snake.some(part => part.x === food.x && part.y === food.y));
+  }
+  function draw() {
+    ctx.fillStyle = '#111a19'; ctx.fillRect(0, 0, 400, 400);
+    ctx.fillStyle = '#d85b48'; ctx.fillRect(food.x * size + 3, food.y * size + 3, 14, 14);
+    ctx.fillStyle = '#91c9a6';
+    snake.forEach(part => ctx.fillRect(part.x * size + 1, part.y * size + 1, 18, 18));
+  }
+  function tick() {
+    direction = nextDirection;
+    const head = {x: snake[0].x + direction.x, y: snake[0].y + direction.y};
+    if (head.x < 0 || head.x >= cells || head.y < 0 || head.y >= cells || snake.some(p => p.x === head.x && p.y === head.y)) {
+      running = false; clearInterval(timer); status.textContent = 'Game over. Submitting score…'; submitScore(); return;
+    }
+    snake.unshift(head);
+    if (head.x === food.x && head.y === food.y) {
+      score += 10; scoreText.textContent = score;
+      if (snake.length === cells * cells) {
+        running = false; clearInterval(timer);
+        status.textContent = 'Board cleared! Submitting score…'; draw(); submitScore(); return;
+      }
+      placeFood();
+    } else snake.pop();
+    draw();
+  }
+  function startGame() {
+    clearInterval(timer); snake = [{x: 10, y: 10}, {x: 9, y: 10}, {x: 8, y: 10}];
+    direction = {x: 1, y: 0}; nextDirection = direction; score = 0; scoreText.textContent = score;
+    status.textContent = 'Use the arrow keys.'; running = true; placeFood(); draw();
+    timer = setInterval(tick, 120);
+  }
+  document.addEventListener('keydown', event => {
+    if (event.code === 'Space') {
+      event.preventDefault();
+      if (!running && !event.repeat) startGame();
+      return;
+    }
+    const moves = {ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0]};
+    if (!moves[event.key] || !running) return;
+    event.preventDefault();
+    const [x, y] = moves[event.key];
+    if (x !== -direction.x || y !== -direction.y) nextDirection = {x, y};
+  });
+  // The client checks the board's finite maximum; score legitimacy is not checked by the server.
+  async function submitScore() {
+    if (!Number.isInteger(score) || score < 0 || score > 3970) { status.textContent = 'That score is not possible on this board.'; return; }
+    const response = await fetch('/api/score', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({score})});
+    const result = await response.json();
+    if (result.error) { status.textContent = result.error; return; }
+    renderScores(result.scores);
+    status.textContent = result.flag ? `First place! ${result.flag}` : 'Score submitted.';
+  }
+  function renderScores(scores) {
+    const list = document.querySelector('#scores'); list.replaceChildren();
+    scores.forEach(entry => { const item = document.createElement('li'); item.textContent = `${entry.name}: ${entry.score}`; list.append(item); });
+  }
+  fetch('/api/leaderboard').then(response => response.json()).then(data => renderScores(data.scores));
+  status.textContent = 'Press Space to start.';
+})();
+</script>
+</body>
+</html>

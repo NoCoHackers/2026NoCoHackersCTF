@@ -1,0 +1,15 @@
+# Local development only. Production compose is generated from challenge.yml.
+# FLAG='noco{local_test}' docker compose -f challenges/web/slithery-little-snake/compose.yml up --build
+services:
+  chal:
+    build:
+      context: ../..
+      dockerfile: challenges/web/slithery-little-snake/Dockerfile
+    environment:
+      FLAG: "${FLAG:?set FLAG in your environment}"
+    ports:
+      - "8080:8080"
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]

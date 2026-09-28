@@ -2,5 +2,6 @@
   "challenges/pwn/cellar-door": "Cellar Door",
   "challenges/pwn/municipal-connectivity-test": "Municipal Connectivity Test",
   "challenges/web/ghostdex": "Ghost in the Index",
-  "challenges/web/haunted-brewery": "Haunted Brewery"
+  "challenges/web/haunted-brewery": "Haunted Brewery",
+  "challenges/web/slithery-little-snake": "slithery little snake"
 }
