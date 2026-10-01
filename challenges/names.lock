@@ -1,4 +1,9 @@
 {
+  "challenges/pwn/babs-spellbook": "Babs's Spellbook: The Familiar\u2019s Gate",
+  "challenges/pwn/babs-spellbook#misfiled-spellbook": "Babs's Spellbook: The Misfiled Spellbook",
+  "challenges/pwn/babs-spellbook#names-have-power": "Babs's Spellbook: Names Have Power",
+  "challenges/pwn/babs-spellbook#remembering-cauldron": "Babs's Spellbook: The Remembering Cauldron",
+  "challenges/pwn/babs-spellbook#silent-oracle": "Babs's Spellbook: The Silent Oracle",
   "challenges/pwn/cellar-door": "Cellar Door",
   "challenges/pwn/municipal-connectivity-test": "Municipal Connectivity Test",
   "challenges/web/ghostdex": "Ghost in the Index",

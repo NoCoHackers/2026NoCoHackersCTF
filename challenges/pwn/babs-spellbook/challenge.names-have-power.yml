@@ -1,0 +1,29 @@
+name: "Babs's Spellbook: Names Have Power"
+author: bjames
+category: pwn
+
+description: |
+  Babs the cat-witch teaches ancient database magic, one SQLite spell at a time.
+  Lesson 3: Names Have Power. Connect to her terminal and select lesson 3.
+  This TCP challenge teaches SQL injection, not binary exploitation.
+
+  nc chal.nocohackers.com 30002
+
+value: 200
+type: dynamic
+extra:
+  initial: 350
+  decay: 25
+  minimum: 175
+
+flags:
+  - noco{sqlite_remembers_every_table}
+
+tags: [sql-injection, schema]
+hints: []
+files: []
+state: hidden
+version: "1.0"
+
+x-noco:
+  autosolve: solution/solve-names-have-power.sh

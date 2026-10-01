@@ -1,0 +1,29 @@
+name: "Babs's Spellbook: The Silent Oracle"
+author: bjames
+category: pwn
+
+description: |
+  Babs the cat-witch teaches ancient database magic, one SQLite spell at a time.
+  Lesson 4: The Silent Oracle. Connect to her terminal and select lesson 4.
+  This TCP challenge teaches SQL injection, not binary exploitation.
+
+  nc chal.nocohackers.com 30002
+
+value: 250
+type: dynamic
+extra:
+  initial: 400
+  decay: 25
+  minimum: 225
+
+flags:
+  - noco{even_a_nod_is_an_answer}
+
+tags: [sql-injection, blind]
+hints: []
+files: []
+state: hidden
+version: "1.0"
+
+x-noco:
+  autosolve: solution/solve-silent-oracle.sh

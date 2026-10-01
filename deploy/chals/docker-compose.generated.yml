@@ -2,6 +2,41 @@
 # Produced by deploy/chals/generate.py from the challenges/ tree.
 # Run `make -C deploy/chals generate` after changing any challenge.yml.
 services:
+  pwn-babs-spellbook:
+    container_name: pwn-babs-spellbook
+    image: ghcr.io/nocohackers/chal-pwn-babs-spellbook:2026
+    environment:
+      FLAG: ${FLAG_PWN_BABS_SPELLBOOK:?missing flag}
+      NOCO_FLAG_MAIN: ${FLAG_PWN_BABS_SPELLBOOK:?missing flag}
+      NOCO_FLAG_MISFILED_SPELLBOOK: ${FLAG_PWN_BABS_SPELLBOOK__ENTRY_MISFILED_SPELLBOOK:?missing flag}
+      NOCO_FLAG_NAMES_HAVE_POWER: ${FLAG_PWN_BABS_SPELLBOOK__ENTRY_NAMES_HAVE_POWER:?missing flag}
+      NOCO_FLAG_REMEMBERING_CAULDRON: ${FLAG_PWN_BABS_SPELLBOOK__ENTRY_REMEMBERING_CAULDRON:?missing flag}
+      NOCO_FLAG_SILENT_ORACLE: ${FLAG_PWN_BABS_SPELLBOOK__ENTRY_SILENT_ORACLE:?missing flag}
+    restart: unless-stopped
+    read_only: true
+    tmpfs: &id001
+    - /tmp:size=64m
+    - /flag:size=1m
+    security_opt:
+    - no-new-privileges:true
+    cap_drop:
+    - ALL
+    pids_limit: 32
+    mem_limit: 96m
+    cpus: 0.5
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    ports:
+    - 30002:1337
+    networks:
+    - isolated
+    cap_add:
+    - SETUID
+    - SETGID
+    - SETPCAP
   pwn-cellar-door:
     container_name: pwn-cellar-door
     image: ghcr.io/nocohackers/chal-pwn-cellar-door:2026
@@ -9,9 +44,7 @@ services:
       FLAG: ${FLAG_PWN_CELLAR_DOOR:?missing flag}
     restart: unless-stopped
     read_only: true
-    tmpfs: &id001
-    - /tmp:size=64m
-    - /flag:size=1m
+    tmpfs: *id001
     security_opt:
     - no-new-privileges:true
     cap_drop:

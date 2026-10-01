@@ -1,0 +1,35 @@
+name: "Babs's Spellbook: The Familiar’s Gate"
+author: bjames
+category: pwn
+
+description: |
+  Babs the cat-witch teaches ancient database magic, one SQLite spell at a time.
+  Lesson 1: The Familiar’s Gate. Connect to her terminal and select lesson 1.
+  This TCP challenge teaches SQL injection, not binary exploitation.
+
+  nc chal.nocohackers.com 30002
+
+value: 100
+type: dynamic
+extra:
+  initial: 250
+  decay: 25
+  minimum: 75
+
+flags:
+  - noco{the_gate_forgot_its_secret}
+
+tags: [sql-injection, beginner]
+hints: []
+files: []
+state: hidden
+version: "1.0"
+
+x-noco:
+  kind: tcp
+  subdomain: null
+  port: 30002
+  memory: 96m
+  cpus: "0.5"
+  pids: 32
+  autosolve: solution/solve.sh

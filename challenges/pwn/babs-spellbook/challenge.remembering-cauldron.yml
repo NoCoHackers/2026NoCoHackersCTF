@@ -1,0 +1,29 @@
+name: "Babs's Spellbook: The Remembering Cauldron"
+author: bjames
+category: pwn
+
+description: |
+  Babs the cat-witch teaches ancient database magic, one SQLite spell at a time.
+  Lesson 5: The Remembering Cauldron. Connect to her terminal and select lesson 5.
+  This TCP challenge teaches SQL injection, not binary exploitation.
+
+  nc chal.nocohackers.com 30002
+
+value: 300
+type: dynamic
+extra:
+  initial: 450
+  decay: 25
+  minimum: 275
+
+flags:
+  - noco{stored_words_can_become_spells}
+
+tags: [sql-injection, second-order]
+hints: []
+files: []
+state: hidden
+version: "1.0"
+
+x-noco:
+  autosolve: solution/solve-remembering-cauldron.sh

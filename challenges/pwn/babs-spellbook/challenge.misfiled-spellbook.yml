@@ -1,0 +1,29 @@
+name: "Babs's Spellbook: The Misfiled Spellbook"
+author: bjames
+category: pwn
+
+description: |
+  Babs the cat-witch teaches ancient database magic, one SQLite spell at a time.
+  Lesson 2: The Misfiled Spellbook. Connect to her terminal and select lesson 2.
+  This TCP challenge teaches SQL injection, not binary exploitation.
+
+  nc chal.nocohackers.com 30002
+
+value: 150
+type: dynamic
+extra:
+  initial: 300
+  decay: 25
+  minimum: 125
+
+flags:
+  - noco{the_locked_shelf_had_two_columns}
+
+tags: [sql-injection, union]
+hints: []
+files: []
+state: hidden
+version: "1.0"
+
+x-noco:
+  autosolve: solution/solve-misfiled-spellbook.sh
