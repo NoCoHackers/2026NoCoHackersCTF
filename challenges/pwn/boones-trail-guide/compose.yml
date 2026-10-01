@@ -1,0 +1,16 @@
+services:
+  chal:
+    build:
+      context: ../../..
+      dockerfile: challenges/pwn/boones-trail-guide/Dockerfile
+    environment:
+      FLAG: "${FLAG:?set FLAG in your environment}"
+      NOCO_FLAG_DANGEROUS_OPTIONS: "${NOCO_FLAG_DANGEROUS_OPTIONS:?set NOCO_FLAG_DANGEROUS_OPTIONS}"
+      NOCO_FLAG_QUIET_WHISTLE: "${NOCO_FLAG_QUIET_WHISTLE:?set NOCO_FLAG_QUIET_WHISTLE}"
+      NOCO_FLAG_OLD_DOG_NEW_TRICKS: "${NOCO_FLAG_OLD_DOG_NEW_TRICKS:?set NOCO_FLAG_OLD_DOG_NEW_TRICKS}"
+    ports: ["30003:1337"]
+    read_only: true
+    tmpfs: [/tmp, "/flag:size=1m"]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cap_add: [SETUID, SETGID, SETPCAP]

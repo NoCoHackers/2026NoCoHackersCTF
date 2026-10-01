@@ -1,0 +1,28 @@
+name: "Boone's Trail Guide: The Quiet Whistle"
+author: bjames
+category: pwn
+
+description: |
+  Boone the dog teaches shell command injection, one trail at a time.
+  Lesson 3: The Quiet Whistle. Connect to his terminal and select lesson 3.
+
+  nc chal.nocohackers.com 30003
+
+value: 200
+type: dynamic
+extra:
+  initial: 350
+  decay: 25
+  minimum: 150
+
+flags:
+  - noco{exit_statuses_can_whistle_secrets}
+
+tags: [command-injection, blind]
+hints: []
+files: []
+state: hidden
+version: "1.0"
+
+x-noco:
+  autosolve: solution/solve-quiet-whistle.sh

@@ -1,0 +1,29 @@
+name: "Boone's Trail Guide: Dangerous Options"
+author: bjames
+category: pwn
+
+description: |
+  Boone the dog teaches command-line injection, one trail at a time.
+  Lesson 2: Dangerous Options. Connect to his terminal and select lesson 2.
+  This lesson shows why avoiding a shell is necessary but not always sufficient.
+
+  nc chal.nocohackers.com 30003
+
+value: 175
+type: dynamic
+extra:
+  initial: 325
+  decay: 25
+  minimum: 140
+
+flags:
+  - noco{argv_can_have_dangerous_semantics_too}
+
+tags: [argument-injection, command-injection]
+hints: []
+files: []
+state: hidden
+version: "1.0"
+
+x-noco:
+  autosolve: solution/solve-dangerous-options.sh

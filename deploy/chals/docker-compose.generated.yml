@@ -37,6 +37,38 @@ services:
     - SETUID
     - SETGID
     - SETPCAP
+  pwn-boones-trail-guide:
+    container_name: pwn-boones-trail-guide
+    image: ghcr.io/nocohackers/chal-pwn-boones-trail-guide:2026
+    environment:
+      FLAG: ${FLAG_PWN_BOONES_TRAIL_GUIDE:?missing flag}
+      NOCO_FLAG_MAIN: ${FLAG_PWN_BOONES_TRAIL_GUIDE:?missing flag}
+      NOCO_FLAG_DANGEROUS_OPTIONS: ${FLAG_PWN_BOONES_TRAIL_GUIDE__ENTRY_DANGEROUS_OPTIONS:?missing flag}
+      NOCO_FLAG_OLD_DOG_NEW_TRICKS: ${FLAG_PWN_BOONES_TRAIL_GUIDE__ENTRY_OLD_DOG_NEW_TRICKS:?missing flag}
+      NOCO_FLAG_QUIET_WHISTLE: ${FLAG_PWN_BOONES_TRAIL_GUIDE__ENTRY_QUIET_WHISTLE:?missing flag}
+    restart: unless-stopped
+    read_only: true
+    tmpfs: *id001
+    security_opt:
+    - no-new-privileges:true
+    cap_drop:
+    - ALL
+    pids_limit: 32
+    mem_limit: 64m
+    cpus: 0.5
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    ports:
+    - 30003:1337
+    networks:
+    - isolated
+    cap_add:
+    - SETUID
+    - SETGID
+    - SETPCAP
   pwn-cellar-door:
     container_name: pwn-cellar-door
     image: ghcr.io/nocohackers/chal-pwn-cellar-door:2026

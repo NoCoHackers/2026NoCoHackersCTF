@@ -1,0 +1,35 @@
+name: "Boone's Trail Guide: Off the Leash"
+author: bjames
+category: pwn
+
+description: |
+  Boone the dog teaches shell command injection, one trail at a time.
+  Lesson 1: Off the Leash. Connect to his terminal and select lesson 1.
+  This TCP challenge teaches command injection, not binary exploitation.
+
+  nc chal.nocohackers.com 30003
+
+value: 150
+type: dynamic
+extra:
+  initial: 300
+  decay: 25
+  minimum: 125
+
+flags:
+  - noco{a_quote_comment_set_the_command_free}
+
+tags: [command-injection, quote-breaking]
+hints: []
+files: []
+state: hidden
+version: "1.0"
+
+x-noco:
+  kind: tcp
+  subdomain: null
+  port: 30003
+  memory: 64m
+  cpus: "0.5"
+  pids: 32
+  autosolve: solution/solve.sh

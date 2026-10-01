@@ -1,0 +1,5 @@
+#!/bin/sh
+# socat gives each player a PTY; disable its local echo without changing
+# terminal handling for any other challenge using the shared base image.
+stty -echo
+exec /srv/boone

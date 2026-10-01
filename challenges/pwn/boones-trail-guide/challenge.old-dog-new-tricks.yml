@@ -1,0 +1,28 @@
+name: "Boone's Trail Guide: Old Dog, New Tricks"
+author: bjames
+category: pwn
+
+description: |
+  Boone the dog teaches shell command injection, one trail at a time.
+  Lesson 4: Old Dog, New Tricks. Connect to his terminal and select lesson 4.
+
+  nc chal.nocohackers.com 30003
+
+value: 225
+type: dynamic
+extra:
+  initial: 375
+  decay: 25
+  minimum: 175
+
+flags:
+  - noco{stored_words_are_still_untrusted}
+
+tags: [command-injection, second-order]
+hints: []
+files: []
+state: hidden
+version: "1.0"
+
+x-noco:
+  autosolve: solution/solve-old-dog-new-tricks.sh
