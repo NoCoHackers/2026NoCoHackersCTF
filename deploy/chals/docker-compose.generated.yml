@@ -69,34 +69,6 @@ services:
     - SETUID
     - SETGID
     - SETPCAP
-  pwn-cellar-door:
-    container_name: pwn-cellar-door
-    image: ghcr.io/nocohackers/chal-pwn-cellar-door:2026
-    environment:
-      FLAG: ${FLAG_PWN_CELLAR_DOOR:?missing flag}
-    restart: unless-stopped
-    read_only: true
-    tmpfs: *id001
-    security_opt:
-    - no-new-privileges:true
-    cap_drop:
-    - ALL
-    pids_limit: 32
-    mem_limit: 64m
-    cpus: 0.25
-    logging:
-      driver: json-file
-      options:
-        max-size: 10m
-        max-file: '3'
-    ports:
-    - 30000:1337
-    networks:
-    - isolated
-    cap_add:
-    - SETUID
-    - SETGID
-    - SETPCAP
   pwn-municipal-connectivity-test:
     container_name: pwn-municipal-connectivity-test
     image: ghcr.io/nocohackers/chal-pwn-municipal-connectivity-test:2026
@@ -189,34 +161,6 @@ services:
       traefik.http.services.web-ghostdex.loadbalancer.server.port: '8080'
       traefik.http.routers.web-ghostdex.entrypoints: websecure
       traefik.http.routers.web-ghostdex.tls: 'true'
-  web-haunted-brewery:
-    container_name: web-haunted-brewery
-    image: ghcr.io/nocohackers/chal-web-haunted-brewery:2026
-    environment:
-      FLAG: ${FLAG_WEB_HAUNTED_BREWERY:?missing flag}
-    restart: unless-stopped
-    read_only: true
-    tmpfs: *id002
-    security_opt:
-    - no-new-privileges:true
-    cap_drop:
-    - ALL
-    pids_limit: 64
-    mem_limit: 128m
-    cpus: 0.25
-    logging:
-      driver: json-file
-      options:
-        max-size: 10m
-        max-file: '3'
-    networks:
-    - edge
-    labels:
-      traefik.enable: 'true'
-      traefik.http.routers.web-haunted-brewery.rule: Host(`brewery.chal.nocohackers.com`)
-      traefik.http.services.web-haunted-brewery.loadbalancer.server.port: '8080'
-      traefik.http.routers.web-haunted-brewery.entrypoints: websecure
-      traefik.http.routers.web-haunted-brewery.tls: 'true'
   web-i-25-rampage:
     container_name: web-i-25-rampage
     image: ghcr.io/nocohackers/chal-web-i-25-rampage:2026

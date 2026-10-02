@@ -53,10 +53,10 @@ down:        ## stop everything (scoreboard is a separate host and unaffected)
 ps:          ## what's running and healthy
 	$(COMPOSE) ps
 
-logs:        ## tail everything; make logs S=web-haunted-brewery for one
+logs:        ## tail everything; make logs S=web-ghostdex for one
 	$(COMPOSE) logs -f --tail=100 $(S)
 
-restart:     ## restart one challenge: make restart S=web-haunted-brewery
+restart:     ## restart one challenge: make restart S=web-ghostdex
 	$(COMPOSE) restart $(S)
 
 reset-one:   ## nuke and recreate one challenge's container and state

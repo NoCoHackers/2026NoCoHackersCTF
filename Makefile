@@ -40,7 +40,7 @@ dev-down: ## stop the dev stack (CLEAN=1 also removes volumes/DB)
 	@$(DEV) down $(if $(CLEAN),-v,)
 	@docker network rm $(DEV_NET) 2>/dev/null || true
 
-dev-logs: ## tail dev logs; make dev-logs S=web-haunted-brewery for one
+dev-logs: ## tail dev logs; make dev-logs S=web-ghostdex for one
 	@$(DEV) logs -f --tail=80 $(S)
 
 dev-ps: ## what's running locally

@@ -4,7 +4,7 @@
 #   deploy/scoreboard/sync.sh                 # sync to production (.ctf/config url)
 #   deploy/scoreboard/sync.sh --dev           # sync to the local `make dev` stack
 #   deploy/scoreboard/sync.sh --dry-run       # config diff only, no challenge writes
-#   deploy/scoreboard/sync.sh -c challenges/web/haunted-brewery   # one bundle
+#   deploy/scoreboard/sync.sh -c challenges/web/ghostdex   # one bundle
 #   deploy/scoreboard/sync.sh -c challenges/misc/device/challenge.uart.yml
 #
 # The admin token comes from the environment, never the repo:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Print one challenge entry's deploy fields as shell assignments.
 
-    eval "$(tools/chalmeta.py challenges/web/haunted-brewery)"
+    eval "$(tools/chalmeta.py challenges/web/ghostdex)"
     eval "$(tools/chalmeta.py challenges/misc/device/challenge.uart.yml)"
 
 A directory selects the primary entry; an explicit manifest selects that entry.

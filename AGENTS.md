@@ -172,7 +172,7 @@ export CTFCLI_ACCESS_TOKEN=ctfd_xxx      # CTFd -> Settings -> Access Tokens (ad
 make sync                                # push to production (url from .ctf/config)
 make sync TARGET=dev                     # push to the local `make dev` stack
 deploy/scoreboard/sync.sh --dry-run      # show the config diff, write nothing
-deploy/scoreboard/sync.sh -c challenges/web/haunted-brewery   # a single challenge
+deploy/scoreboard/sync.sh -c challenges/web/ghostdex   # a single challenge
 ```
 
 Under the hood `sync` runs `ctf challenge install --force` per challenge (create

@@ -346,8 +346,8 @@ Common operations, all from the challenge host:
 
 ```sh
 make -C deploy/chals ps                       # health of every challenge
-make -C deploy/chals logs S=web-haunted-brewery   # tail one challenge
-make -C deploy/chals restart S=pwn-cellar-door    # bounce one challenge
+make -C deploy/chals logs S=web-ghostdex   # tail one challenge
+make -C deploy/chals restart S=pwn-municipal-connectivity-test    # bounce one challenge
 make -C deploy/chals reset-one S=web-foo           # nuke + recreate one (drops its tmpfs state)
 ```
 

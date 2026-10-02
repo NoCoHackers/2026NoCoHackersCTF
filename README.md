@@ -38,8 +38,8 @@ Working on a single challenge instead:
 
 ```sh
 FLAG='noco{local}' docker compose \
-  -f challenges/web/haunted-brewery/compose.yml up --build   # → localhost:8080
-tools/test-challenge.sh challenges/web/haunted-brewery        # build, boot, autosolve
+  -f challenges/web/ghostdex/compose.yml up --build   # → localhost:8080
+tools/test-challenge.sh challenges/web/ghostdex        # build, boot, autosolve
 ```
 
 ## What's here
@@ -48,24 +48,22 @@ tools/test-challenge.sh challenges/web/haunted-brewery        # build, boot, aut
 |------|-----------|
 | **`theme/`** | The look of the event. Design tokens (`tokens.css`), components (`theme.css`), header/footer partials, favicon, and the netcat banner. One palette and system-font type stack. Every challenge links `theme.bundle.css`. |
 | **`images/`** | The three base images every challenge builds `FROM`: `base-web` (nginx + runtime flag templating), `base-pwn` (socat fork-per-connection), and `theme-assets` (just the theme, for challenges with their own stack). |
-| **`challenges/`** | One deployment bundle per directory, grouped by category. `TEMPLATE/` is the starting point. The current tree contains 9 runnable bundles and 19 independently scored entries. |
+| **`challenges/`** | One deployment bundle per directory, grouped by category. `TEMPLATE/` is the starting point. The current tree contains 7 runnable bundles and 17 independently scored entries. |
 | **`deploy/`** | Two hosts. `deploy/scoreboard/` runs CTFd + MariaDB + Redis + Caddy with backups; `deploy/chals/` runs Traefik and every challenge; `deploy/host/` and `deploy/digitalocean/` bootstrap existing VPSes and configure their edge. |
 | **`tools/`** | Build, validate, and test scripts — the same ones CI runs. |
 | **`.github/`** | CI, code owners, and the templates for proposing and submitting challenges. |
 
 ## Current challenge set
 
-The repository currently has **9 runnable bundles** producing **19 scored
+The repository currently has **7 runnable bundles** producing **17 scored
 entries**. All manifests remain `hidden` until kickoff. The manifests are the
 source of truth; this table is an author-facing snapshot of the current tree.
 
 | category | bundle | scored entries | service |
 |----------|--------|---------------:|---------|
 | web | `ghostdex` | 1 | HTTP |
-| web | `haunted-brewery` | 1 | HTTP |
 | web | `i-25-rampage` | 1 | HTTP |
 | web | `slithery-little-snake` | 1 | HTTP |
-| pwn | `cellar-door` | 1 | TCP `30000` |
 | pwn | `municipal-connectivity-test` | 1 | TCP `30001` |
 | pwn | `babs-spellbook` | 5 | TCP `30002` |
 | pwn | `boones-trail-guide` | 4 | TCP `30003` |
