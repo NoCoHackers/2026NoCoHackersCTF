@@ -1,0 +1,35 @@
+name: "Sam's Burrow Guide: The Painted Sign"
+author: bjames
+category: pwn
+
+description: |
+  Sam the bunny teaches binary exploitation, one burrow at a time.
+  Lesson 4: The Painted Sign. Connect to his terminal and select lesson 4.
+  Explore a separate branch of binary sorcery: use a format-string write to
+  set the target's exact value. This is a capstone side path, not another
+  stack-overflow rung. Download the spellbook for the vulnerable C source.
+
+  nc chal.nocohackers.com 30004
+
+value: 175
+type: dynamic
+extra:
+  initial: 325
+  decay: 25
+  minimum: 125
+
+flags:
+  - noco{percent_n_painted_the_number_on_the_latch}
+
+tags: [binary-exploitation, format-string]
+hints:
+  - "Use only positional conversions: argument 1 is a printable integer and argument 2 is the int pointer for %n."
+files:
+  - handout/README.md
+  - handout/common.h
+  - handout/lesson4.c
+state: hidden
+version: "1.0"
+
+x-noco:
+  autosolve: solution/solve-painted-sign.sh

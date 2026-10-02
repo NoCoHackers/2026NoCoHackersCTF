@@ -125,6 +125,38 @@ services:
     - SETUID
     - SETGID
     - SETPCAP
+  pwn-sams-burrow-guide:
+    container_name: pwn-sams-burrow-guide
+    image: ghcr.io/nocohackers/chal-pwn-sams-burrow-guide:2026
+    environment:
+      FLAG: ${FLAG_PWN_SAMS_BURROW_GUIDE:?missing flag}
+      NOCO_FLAG_MAIN: ${FLAG_PWN_SAMS_BURROW_GUIDE:?missing flag}
+      NOCO_FLAG_PAINTED_SIGN: ${FLAG_PWN_SAMS_BURROW_GUIDE__ENTRY_PAINTED_SIGN:?missing flag}
+      NOCO_FLAG_RETURN_TO_HUTCH: ${FLAG_PWN_SAMS_BURROW_GUIDE__ENTRY_RETURN_TO_HUTCH:?missing flag}
+      NOCO_FLAG_SECRET_TUNNEL: ${FLAG_PWN_SAMS_BURROW_GUIDE__ENTRY_SECRET_TUNNEL:?missing flag}
+    restart: unless-stopped
+    read_only: true
+    tmpfs: *id001
+    security_opt:
+    - no-new-privileges:true
+    cap_drop:
+    - ALL
+    pids_limit: 32
+    mem_limit: 32m
+    cpus: 0.5
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    ports:
+    - 30004:1337
+    networks:
+    - isolated
+    cap_add:
+    - SETUID
+    - SETGID
+    - SETPCAP
   web-ghostdex:
     container_name: web-ghostdex
     image: ghcr.io/nocohackers/chal-web-ghostdex:2026

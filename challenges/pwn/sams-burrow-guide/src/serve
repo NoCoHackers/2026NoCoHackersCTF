@@ -1,0 +1,19 @@
+#!/bin/sh
+set -eu
+
+stty -echo
+printf '%s\n' ' (\(\' ' ( -.-)  Sam’s Arcane Burrow of Binary Sorcery' ' o_(")(")  1 Carrot Ward | 2 Ley Line | 3 Return Spell | 4 Enchanted Sign'
+printf '%s\n' 'An unexpected disconnect before Sam answers usually means your spell crashed. Reconnect and adjust your bytes.'
+printf 'Lesson: '
+IFS= read -r lesson
+printf '\n'
+# Binary payloads contain NUL bytes; switch the PTY out of canonical mode only
+# after the text menu has consumed its newline.
+stty raw -echo
+case "$lesson" in
+    1) exec /srv/lesson1 ;;
+    2) exec /srv/lesson2 ;;
+    3) exec /srv/lesson3 ;;
+    4) exec /srv/lesson4 ;;
+    *) printf '%s\n' 'Sam: Choose an arcane lesson from 1 to 4, apprentice.' ;;
+esac

@@ -1,0 +1,40 @@
+name: "Sam's Burrow Guide: Too Many Carrots"
+author: bjames
+category: pwn
+
+description: |
+  Sam the bunny teaches binary exploitation, one burrow at a time.
+  Lesson 1: Too Many Carrots. Connect to his terminal and select lesson 1.
+  Overflow a neighboring value without touching a return address.
+  Download the spellbook for the vulnerable C source and binary-input primer.
+
+  nc chal.nocohackers.com 30004
+
+value: 100
+type: dynamic
+extra:
+  initial: 250
+  decay: 25
+  minimum: 75
+
+flags:
+  - noco{carrots_spilled_into_the_next_field}
+
+tags: [binary-exploitation, buffer-overflow, beginner]
+hints:
+  - "A newline is one byte too: press Enter immediately after exactly 16 name characters."
+files:
+  - handout/README.md
+  - handout/common.h
+  - handout/lesson1.c
+state: hidden
+version: "1.0"
+
+x-noco:
+  kind: tcp
+  subdomain: null
+  port: 30004
+  memory: 32m
+  cpus: "0.5"
+  pids: 32
+  autosolve: solution/solve.sh

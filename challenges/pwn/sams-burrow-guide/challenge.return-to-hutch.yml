@@ -1,0 +1,34 @@
+name: "Sam's Burrow Guide: Return to Hutch"
+author: bjames
+category: pwn
+
+description: |
+  Sam the bunny teaches binary exploitation, one burrow at a time.
+  Lesson 3: Return to Hutch. Connect to his terminal and select lesson 3.
+  Take control of a saved return address and land in a hidden function.
+  Download the spellbook for the vulnerable C source and binary primer.
+
+  nc chal.nocohackers.com 30004
+
+value: 200
+type: dynamic
+extra:
+  initial: 350
+  decay: 25
+  minimum: 150
+
+flags:
+  - noco{the_saved_return_address_hopped_home}
+
+tags: [binary-exploitation, ret2win, stack-overflow]
+hints:
+  - "After the 64-byte local buffer come eight saved frame-pointer bytes, then the saved return address. Pack the disclosed address for amd64."
+files:
+  - handout/README.md
+  - handout/common.h
+  - handout/lesson3.c
+state: hidden
+version: "1.0"
+
+x-noco:
+  autosolve: solution/solve-return-to-hutch.sh
