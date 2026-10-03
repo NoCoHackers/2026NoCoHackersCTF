@@ -18,7 +18,7 @@ extra:
   minimum: 150
 
 flags:
-  - noco{the_saved_return_address_hopped_home}
+  - noco{305cda4f68757390c1c6fec19606a46b}
 
 tags: [binary-exploitation, ret2win, stack-overflow]
 hints:

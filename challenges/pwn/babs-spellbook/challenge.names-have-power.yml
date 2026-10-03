@@ -17,7 +17,7 @@ extra:
   minimum: 175
 
 flags:
-  - noco{sqlite_remembers_every_table}
+  - noco{6d3a9c449d094b7d8145bc2a5479613c}
 
 tags: [sql-injection, schema]
 hints: []

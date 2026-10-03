@@ -17,7 +17,7 @@ extra:
   minimum: 225
 
 flags:
-  - noco{even_a_nod_is_an_answer}
+  - noco{99148eb83d2568fd7da2fc1ffcb47f97}
 
 tags: [sql-injection, blind]
 hints: []

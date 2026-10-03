@@ -19,7 +19,7 @@ extra:
   minimum: 125
 
 flags:
-  - noco{percent_n_painted_the_number_on_the_latch}
+  - noco{b4d48e24d02cbaa236081171f99fbcb3}
 
 tags: [binary-exploitation, format-string]
 hints:

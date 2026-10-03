@@ -18,7 +18,7 @@ extra:
   minimum: 75
 
 flags:
-  - noco{carrots_spilled_into_the_next_field}
+  - noco{550e440985e71a8f688dba35ad33f946}
 
 tags: [binary-exploitation, buffer-overflow, beginner]
 hints:

@@ -16,7 +16,7 @@ extra:
   minimum: 150
 
 flags:
-  - noco{exit_statuses_can_whistle_secrets}
+  - noco{2897a61d0aed403ad3dc87e334c11dba}
 
 tags: [command-injection, blind]
 hints: []

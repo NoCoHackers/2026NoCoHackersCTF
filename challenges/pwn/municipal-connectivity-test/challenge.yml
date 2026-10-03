@@ -17,7 +17,7 @@ extra:
   minimum: 100
 
 flags:
-  - noco{municipal_shell_services_are_online}
+  - noco{2bac422b99a54735ea735c75b85ad16e}
 
 tags: [beginner, command-injection]
 hints: []

@@ -16,7 +16,7 @@ extra:
   minimum: 175
 
 flags:
-  - noco{stored_words_are_still_untrusted}
+  - noco{14b965bbb5ff8bb42eb5d98a227cd967}
 
 tags: [command-injection, second-order]
 hints: []

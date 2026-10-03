@@ -17,7 +17,7 @@ extra:
   minimum: 140
 
 flags:
-  - noco{argv_can_have_dangerous_semantics_too}
+  - noco{54719b6628fc4f72dde3c45055225093}
 
 tags: [argument-injection, command-injection]
 hints: []

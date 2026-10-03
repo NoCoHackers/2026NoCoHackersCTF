@@ -17,7 +17,7 @@ extra:
   minimum: 125
 
 flags:
-  - noco{the_locked_shelf_had_two_columns}
+  - noco{d5a97a656f1ff478fc184bca87a73238}
 
 tags: [sql-injection, union]
 hints: []

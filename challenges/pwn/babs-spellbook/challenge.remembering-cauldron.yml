@@ -17,7 +17,7 @@ extra:
   minimum: 275
 
 flags:
-  - noco{stored_words_can_become_spells}
+  - noco{213bce3b40b8138feeb8a217b51fcae0}
 
 tags: [sql-injection, second-order]
 hints: []
