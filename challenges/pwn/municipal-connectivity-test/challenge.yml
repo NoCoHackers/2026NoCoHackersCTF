@@ -2,7 +2,7 @@ name: Municipal Connectivity Test
 author: bjames
 category: pwn
 
-description: |
+description: >-
   The city dragged an old connectivity tester out of storage after something
   chewed through the fiber under College Avenue. It promises to repeat every
   message verbatim, which should make diagnosing the line easy.

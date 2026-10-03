@@ -2,7 +2,7 @@ name: "Boone's Trail Guide: Dangerous Options"
 author: bjames
 category: pwn
 
-description: |
+description: >-
   Boone the dog teaches command-line injection, one trail at a time.
   Lesson 2: Dangerous Options. Connect to his terminal and select lesson 2.
   This lesson shows why avoiding a shell is necessary but not always sufficient.

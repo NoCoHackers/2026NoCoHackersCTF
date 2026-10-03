@@ -2,7 +2,7 @@ name: "Sam's Burrow Guide: Too Many Carrots"
 author: bjames
 category: pwn
 
-description: |
+description: >-
   Sam the bunny teaches binary exploitation, one burrow at a time.
   Lesson 1: Too Many Carrots. Connect to his terminal and select lesson 1.
   Overflow a neighboring value without touching a return address.

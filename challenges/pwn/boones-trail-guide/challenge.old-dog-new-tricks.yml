@@ -2,7 +2,7 @@ name: "Boone's Trail Guide: Old Dog, New Tricks"
 author: bjames
 category: pwn
 
-description: |
+description: >-
   Boone the dog teaches shell command injection, one trail at a time.
   Lesson 4: Old Dog, New Tricks. Connect to his terminal and select lesson 4.
 

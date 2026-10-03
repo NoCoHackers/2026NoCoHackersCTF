@@ -2,7 +2,7 @@ name: "Sam's Burrow Guide: Return to Hutch"
 author: bjames
 category: pwn
 
-description: |
+description: >-
   Sam the bunny teaches binary exploitation, one burrow at a time.
   Lesson 3: Return to Hutch. Connect to his terminal and select lesson 3.
   Take control of a saved return address and land in a hidden function.

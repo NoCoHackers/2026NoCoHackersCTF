@@ -2,7 +2,7 @@ name: "Sam's Burrow Guide: The Painted Sign"
 author: bjames
 category: pwn
 
-description: |
+description: >-
   Sam the bunny teaches binary exploitation, one burrow at a time.
   Lesson 4: The Painted Sign. Connect to his terminal and select lesson 4.
   Explore a separate branch of binary sorcery: use a format-string write to

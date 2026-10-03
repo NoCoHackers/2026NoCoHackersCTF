@@ -94,6 +94,7 @@ that matter most:
 
 | field | why it matters |
 |-------|----------------|
+| `description` | Use a folded YAML block (`>-`) so source wrapping becomes spaces in CTFd; blank lines remain intentional breaks. |
 | `flags` | Exactly one real flag per scored manifest. Must match `noco{...}` and be unique across the event. |
 | `x-noco.kind` | `web` (gets a subdomain), `tcp` (gets a port), or `static` (handout only, nothing runs). |
 | `x-noco.subdomain` | web only; globally unique; becomes `<sub>.chal.nocohackers.com`. |

@@ -2,7 +2,7 @@ name: "Boone's Trail Guide: Off the Leash"
 author: bjames
 category: pwn
 
-description: |
+description: >-
   Boone the dog teaches shell command injection, one trail at a time.
   Lesson 1: Off the Leash. Connect to his terminal and select lesson 1.
   This TCP challenge teaches command injection, not binary exploitation.

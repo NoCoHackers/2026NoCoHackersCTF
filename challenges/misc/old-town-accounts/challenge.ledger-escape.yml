@@ -2,7 +2,7 @@ name: "PDP-11 After Dark II: Off the Books"
 author: bjames
 category: misc
 
-description: |
+description: >-
   The night ledger still runs under 1974 UNIX V4 on its PDP-11, accepting
   only the entries its proprietor expects. Old procedures and a newly posted
   technical bulletin suggest that its retired

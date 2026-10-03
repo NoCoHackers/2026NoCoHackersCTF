@@ -2,7 +2,7 @@ name: "Boone's Trail Guide: The Quiet Whistle"
 author: bjames
 category: pwn
 
-description: |
+description: >-
   Boone the dog teaches shell command injection, one trail at a time.
   Lesson 3: The Quiet Whistle. Connect to his terminal and select lesson 3.
 

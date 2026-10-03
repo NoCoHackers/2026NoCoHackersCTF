@@ -2,7 +2,7 @@ name: "Babs's Spellbook: The Remembering Cauldron"
 author: bjames
 category: pwn
 
-description: |
+description: >-
   Babs the cat-witch teaches ancient database magic, one SQLite spell at a time.
   Lesson 5: The Remembering Cauldron. Connect to her terminal and select lesson 5.
   This TCP challenge teaches SQL injection, not binary exploitation.

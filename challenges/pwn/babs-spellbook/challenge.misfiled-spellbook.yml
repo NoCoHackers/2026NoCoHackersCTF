@@ -2,7 +2,7 @@ name: "Babs's Spellbook: The Misfiled Spellbook"
 author: bjames
 category: pwn
 
-description: |
+description: >-
   Babs the cat-witch teaches ancient database magic, one SQLite spell at a time.
   Lesson 2: The Misfiled Spellbook. Connect to her terminal and select lesson 2.
   This TCP challenge teaches SQL injection, not binary exploitation.

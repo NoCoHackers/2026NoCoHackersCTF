@@ -14,7 +14,7 @@ name: Ghost in the Index         # shown in CTFd; title case, no category prefix
 author: bjames                    # your GitHub handle
 category: web                     # web | pwn | rev | crypto | forensics | osint | misc
 
-description: |
+description: >-
   Their character set seems broader than mine.
 
   Connect: https://ghostdex.chal.nocohackers.com

@@ -2,7 +2,7 @@ name: "Babs's Spellbook: Names Have Power"
 author: bjames
 category: pwn
 
-description: |
+description: >-
   Babs the cat-witch teaches ancient database magic, one SQLite spell at a time.
   Lesson 3: Names Have Power. Connect to her terminal and select lesson 3.
   This TCP challenge teaches SQL injection, not binary exploitation.

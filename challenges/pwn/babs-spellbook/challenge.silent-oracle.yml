@@ -2,7 +2,7 @@ name: "Babs's Spellbook: The Silent Oracle"
 author: bjames
 category: pwn
 
-description: |
+description: >-
   Babs the cat-witch teaches ancient database magic, one SQLite spell at a time.
   Lesson 4: The Silent Oracle. Connect to her terminal and select lesson 4.
   This TCP challenge teaches SQL injection, not binary exploitation.

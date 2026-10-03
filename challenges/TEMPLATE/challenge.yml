@@ -14,7 +14,7 @@ name: Template Challenge          # shown in CTFd; title case, no category prefi
 author: your-github-handle
 category: web                     # web | pwn | rev | crypto | forensics | osint | misc
 
-description: |
+description: >-
   Two or three sentences, written in the voice of the event. Say what the
   player is looking at and what "done" looks like. Do not put the solution,
   the tech stack, or a difficulty rating in here.
