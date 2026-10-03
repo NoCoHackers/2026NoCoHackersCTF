@@ -102,6 +102,25 @@ that matter most:
 | `x-noco.memory` / `cpus` / `pids` | Resource ceilings. Ask for what you need; the defaults suit anything that isn't a database. |
 | `state` | Authors leave it `hidden`. Organizers flip it to `visible` at kickoff. |
 
+### Fixed-point scoring
+
+The event uses fixed scoring. Every scored manifest sets `type: standard` and
+must not contain a dynamic-scoring `extra` block (`initial`, `decay`, or
+`minimum`). Choose `value` from these event-wide tiers:
+
+| value | tier | expected solve |
+|------:|------|----------------|
+| `100` | beginner | Direct, strongly guided, or one obvious vulnerability; little or no automation. |
+| `200` | easy | One familiar technique with modest inspection, context handling, or scripting. |
+| `300` | medium | Multiple steps, a less familiar primitive, or binary/protocol scripting. |
+| `400` | hard | Blind inference, substantial automation, deeper exploitation, or niche-system investigation. |
+| `500` | expert | A long, specialized, multi-stage chain requiring several independent insights. |
+
+Rate difficulty against the whole event, not only neighboring lessons in a
+bundle. Lesson numbers do not require increasing values: a later guided side
+path may be easier than an earlier blind or automation-heavy lesson. Revisit the
+value whenever hints, handouts, or the intended exploit path materially change.
+
 ## Flag handling
 
 This is the single most important mechanic in the repo, so it's spelled out.

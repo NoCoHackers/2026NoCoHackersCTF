@@ -12,12 +12,8 @@ description: |
 
   Connect: https://old-town-accounts.chal.nocohackers.com
 
-value: 500
-type: dynamic
-extra:
-  initial: 500
-  decay: 20
-  minimum: 100
+value: 400
+type: standard
 
 flags:
   - noco{0690ed9b5e9c09569a7bfbd65187cfeb}

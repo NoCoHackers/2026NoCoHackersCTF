@@ -22,11 +22,7 @@ description: |
   Connect: https://template.chal.nocohackers.com
 
 value: 100
-type: dynamic                     # dynamic scoring is the event default
-extra:
-  initial: 500
-  decay: 20                       # solves before the value bottoms out
-  minimum: 100
+type: standard                    # fixed scoring; choose a value matching difficulty
 
 flags:
   - noco{template_replace_me}     # exactly one REAL flag per scoreboard manifest

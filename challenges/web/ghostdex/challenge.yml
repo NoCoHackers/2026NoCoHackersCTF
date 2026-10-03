@@ -19,12 +19,8 @@ description: |
 
   Connect: https://ghostdex.chal.nocohackers.com
 
-value: 100
-type: dynamic                     # dynamic scoring is the event default
-extra:
-  initial: 500
-  decay: 20                       # solves before the value bottoms out
-  minimum: 100
+value: 200
+type: standard
 
 flags:
   - noco{9708c73a80bdfbb395f249cd78e48094}  # unique across the event

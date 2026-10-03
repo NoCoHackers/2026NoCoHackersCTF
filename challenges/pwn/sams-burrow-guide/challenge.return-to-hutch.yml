@@ -10,12 +10,8 @@ description: |
 
   nc chal.nocohackers.com 30004
 
-value: 200
-type: dynamic
-extra:
-  initial: 350
-  decay: 25
-  minimum: 150
+value: 400
+type: standard
 
 flags:
   - noco{305cda4f68757390c1c6fec19606a46b}

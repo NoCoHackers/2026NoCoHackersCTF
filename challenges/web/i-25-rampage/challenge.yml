@@ -8,12 +8,8 @@ description: |
 
   Connect: https://i25.chal.nocohackers.com
 
-value: 100
-type: dynamic
-extra:
-  initial: 500
-  decay: 20
-  minimum: 100
+value: 200
+type: standard
 
 flags:
   - noco{c32b68625346fe84a3711d2c5fa72091}

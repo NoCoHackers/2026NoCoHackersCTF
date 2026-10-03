@@ -10,11 +10,7 @@ description: |
   Connect: https://snake.chal.nocohackers.com
 
 value: 100
-type: dynamic
-extra:
-  initial: 500
-  decay: 20
-  minimum: 100
+type: standard
 
 flags:
   - noco{d49cb63fed4cc1e2103d2e568f4c7d3d}
