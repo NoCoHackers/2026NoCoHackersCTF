@@ -31,6 +31,8 @@ Neither the image layer nor the handout contains a real flag.
   reclaimed. If none qualifies, the documented capacity message is returned.
 - Reset keeps the browser allocation but replaces its disk from the immutable
   master. Deploys and container restarts intentionally discard all progress.
+- The gateway maps modern Backspace bytes (DEL and Ctrl-H) to UNIX V4's `#`
+  erase character; the historical line discipline may echo `#` while erasing.
 
 Every emulator receives a private disk and loopback-only DLI port. OpenSIMH and
 the gateway run as uid 10001 under a read-only, capability-free container;

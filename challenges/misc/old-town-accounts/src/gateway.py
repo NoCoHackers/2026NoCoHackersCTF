@@ -192,6 +192,11 @@ class Instance:
             self.directory = None
 
 
+def translate_input(buf):
+    """Map modern terminal erase bytes to UNIX V4's configured '#' erase."""
+    return buf.replace(b"\x7f", b"#").replace(b"\x08", b"#")
+
+
 def strip_iac(buf, state):
     """Drop telnet negotiation (IAC ...) that simh's mux sends; pass data bytes.
 
@@ -665,6 +670,7 @@ async def ws_handler(ws):
         async for msg in ws:            # keystrokes -> guest tty
             if isinstance(msg, str):
                 msg = msg.encode("latin-1")
+            msg = translate_input(msg)
             if not sess.send_line(msg, generation):
                 await ws.close(code=4403, reason="machine replaced")
                 return

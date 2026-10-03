@@ -5,33 +5,55 @@
 <title>Old Town Accounts — Night Terminal</title>
 <link rel="stylesheet" href="/xterm.css">
 <style>
-  body { background: #14120f; color: #d8cfae; margin: 0;
+  * { box-sizing: border-box; }
+  body { min-height: 100vh; background: #0e0d0b; color: #d8cfae; margin: 0;
+         padding: clamp(.5rem, 2vw, 1.5rem); display: grid; place-items: center;
          font-family: ui-monospace, Menlo, Consolas, monospace; }
-  #bar { display: flex; gap: 1em; align-items: center;
-         padding: .5em 1em; background: #201c14; border-bottom: 1px solid #3a3120; }
+  #station { width: min(96vw, 1120px); height: min(94vh, 760px);
+             display: flex; flex-direction: column; overflow: hidden;
+             background: #14120f; border: 1px solid #4a3e29;
+             box-shadow: 0 1.25rem 4rem #000a, inset 0 0 2.5rem #0005; }
+  #bar { display: flex; flex-wrap: wrap; gap: .55em 1em; align-items: center;
+         padding: .65em 1em; background: #201c14;
+         border-bottom: 1px solid #3a3120; }
   #bar b { letter-spacing: .08em; }
   #status { margin-left: auto; font-size: .85em; opacity: .8; }
-  #term { height: calc(100vh - 44px); padding: .25em; }
+  #term { flex: 1; min-height: 0; padding: clamp(.75rem, 2vw, 1.5rem);
+          display: grid; place-items: center; overflow: auto; }
+  #term .xterm-viewport { scrollbar-width: thin;
+                          scrollbar-color: #57492b #14120f; }
+  #term .xterm-viewport::-webkit-scrollbar { width: 8px; }
+  #term .xterm-viewport::-webkit-scrollbar-track { background: #14120f; }
+  #term .xterm-viewport::-webkit-scrollbar-thumb { background: #57492b; }
   #reset { background: #3a3120; color: #d8cfae; border: 1px solid #57492b;
-           padding: .2em .8em; cursor: pointer; }
-  #notice { margin: 0 1em .6em 1em; padding: .4em .8em; background: #33240f;
+           padding: .3em .8em; cursor: pointer; }
+  #notice { margin: .7em 1em 0; padding: .4em .8em; background: #33240f;
             border: 1px solid #6b4a17; font-size: .9em; display: none; }
   #notice.visible { display: block; }
+  @media (max-width: 700px) {
+    body { padding: 0; place-items: stretch; }
+    #station { width: 100vw; height: 100vh; border: 0; }
+    #status { width: 100%; margin-left: 0; }
+    #term { place-items: start; }
+  }
 </style>
 </head>
 <body>
-<div id="bar">
-  <b>OLD TOWN ACCOUNTS</b>
-  <span style="opacity:.6">night clerk station</span>
-  <button id="reset" title="Wipes this machine and boots a fresh copy. Progress is lost.">Reset machine</button>
-  <span id="status">connecting…</span>
-</div>
-<!--NOTICE-->
-<div id="term"></div>
+<main id="station">
+  <div id="bar">
+    <b>OLD TOWN ACCOUNTS</b>
+    <span style="opacity:.6">night clerk station</span>
+    <span style="opacity:.5" title="UNIX V4 uses # as its erase character">Backspace echoes #</span>
+    <button id="reset" title="Wipes this machine and boots a fresh copy. Progress is lost.">Reset machine</button>
+    <span id="status">connecting…</span>
+  </div>
+  <!--NOTICE-->
+  <div id="term"></div>
+</main>
 <script src="/xterm.js"></script>
 <script>
 const term = new Terminal({ cols: 80, rows: 24, cursorBlink: true,
-                            convertEol: false,
+                            convertEol: false, fontSize: 18, lineHeight: 1.15,
                             theme: { background: "#14120f", foreground: "#d8cfae" } });
 term.open(document.getElementById("term"));
 const status = document.getElementById("status");

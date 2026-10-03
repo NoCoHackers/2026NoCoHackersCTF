@@ -76,6 +76,12 @@ def assert_flag_slots():
     assert master.read_bytes() == original
 
 
+def assert_terminal_translation():
+    assert gateway.translate_input(b"clerx\x7fk\r") == b"clerx#k\r"
+    assert gateway.translate_input(b"clerx\x08k\r") == b"clerx#k\r"
+    assert gateway.translate_input(b"plain input\r") == b"plain input\r"
+
+
 def assert_origin_policy():
     assert gateway.origin_allowed("https://old-town-accounts.chal.nocohackers.com")
     assert gateway.origin_allowed("http://old-town-accounts.chal.localhost")
@@ -356,6 +362,7 @@ def assert_lifecycle():
 
 if __name__ == "__main__":
     assert_flag_slots()
+    assert_terminal_translation()
     assert_origin_policy()
     assert_replacement_guard()
     assert_stale_websocket_guard()
