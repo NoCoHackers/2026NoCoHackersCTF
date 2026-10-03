@@ -5,7 +5,6 @@ category: pwn
 description: >-
   Babs the cat-witch teaches ancient database magic, one SQLite spell at a time.
   Lesson 2: The Misfiled Spellbook. Connect to her terminal and select lesson 2.
-  This TCP challenge teaches SQL injection, not binary exploitation.
 
   nc chal.nocohackers.com 30002
 
