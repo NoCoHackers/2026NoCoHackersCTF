@@ -1,0 +1,28 @@
+# Local development only. Production compose is generated from challenge.yml.
+#
+# FLAG='noco{local_night}' \
+# NOCO_FLAG_LEDGER_ESCAPE='noco{local_ledger}' \
+# NOCO_FLAG_PROPRIETOR='noco{local_proprietor}' \
+# docker compose -f challenges/misc/old-town-accounts/compose.yml up --build
+services:
+  chal:
+    build:
+      context: ../..
+      dockerfile: challenges/misc/old-town-accounts/Dockerfile
+    environment:
+      FLAG: "${FLAG:?set FLAG in your environment}"
+      NOCO_FLAG_LEDGER_ESCAPE: "${NOCO_FLAG_LEDGER_ESCAPE:?set NOCO_FLAG_LEDGER_ESCAPE in your environment}"
+      NOCO_FLAG_PROPRIETOR: "${NOCO_FLAG_PROPRIETOR:?set NOCO_FLAG_PROPRIETOR in your environment}"
+      NOCO_POOL_INITIAL: "${NOCO_POOL_INITIAL:-5}"
+      NOCO_POOL_MAX: "${NOCO_POOL_MAX:-20}"
+      NOCO_IDLE_SECS: "${NOCO_IDLE_SECS:-21600}"
+      NOCO_SESSION_TTL: "${NOCO_SESSION_TTL:-43200}"
+      NOCO_RESET_COOLDOWN: "${NOCO_RESET_COOLDOWN:-30}"
+    ports:
+      - "8080:8080"
+    init: true
+    read_only: true
+    tmpfs:
+      - "/tmp:uid=10001,gid=10001,mode=0700"
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]

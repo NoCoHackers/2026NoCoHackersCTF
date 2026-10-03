@@ -1,0 +1,17 @@
+TECHNICAL BULLETIN 7             oct 26 1974
+LEGACY REPORT PROCESSING
+entries filed before the change carry
+retired report designations. the journal
+reprint station still runs these through
+the legacy report processor.
+the processor is the procedure
+/usr/ledger/report:
+    grep $1 /usr/ledger/rindex
+the designation given at the prompt is
+passed to the processor as its first
+argument. the shell builds the command
+line from the procedure text and the
+argument, then runs it.
+operators should confirm designations
+before reprinting. the processor performs
+no checking of its own.

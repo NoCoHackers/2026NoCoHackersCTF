@@ -2,6 +2,41 @@
 # Produced by deploy/chals/generate.py from the challenges/ tree.
 # Run `make -C deploy/chals generate` after changing any challenge.yml.
 services:
+  misc-old-town-accounts:
+    container_name: misc-old-town-accounts
+    image: ghcr.io/nocohackers/chal-misc-old-town-accounts:2026
+    environment:
+      FLAG: ${FLAG_MISC_OLD_TOWN_ACCOUNTS:?missing flag}
+      NOCO_FLAG_MAIN: ${FLAG_MISC_OLD_TOWN_ACCOUNTS:?missing flag}
+      NOCO_FLAG_LEDGER_ESCAPE: ${FLAG_MISC_OLD_TOWN_ACCOUNTS__ENTRY_LEDGER_ESCAPE:?missing flag}
+      NOCO_FLAG_PROPRIETOR: ${FLAG_MISC_OLD_TOWN_ACCOUNTS__ENTRY_PROPRIETOR:?missing flag}
+    restart: unless-stopped
+    read_only: true
+    tmpfs: &id002
+    - /tmp:size=64m
+    - /var/run
+    - /var/cache/nginx
+    - /srv/www:size=64m,uid=101,gid=101,mode=0755
+    security_opt:
+    - no-new-privileges:true
+    cap_drop:
+    - ALL
+    pids_limit: 128
+    mem_limit: 512m
+    cpus: 2.0
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    networks:
+    - edge
+    labels:
+      traefik.enable: 'true'
+      traefik.http.routers.misc-old-town-accounts.rule: Host(`old-town-accounts.chal.nocohackers.com`)
+      traefik.http.services.misc-old-town-accounts.loadbalancer.server.port: '8080'
+      traefik.http.routers.misc-old-town-accounts.entrypoints: websecure
+      traefik.http.routers.misc-old-town-accounts.tls: 'true'
   pwn-babs-spellbook:
     container_name: pwn-babs-spellbook
     image: ghcr.io/nocohackers/chal-pwn-babs-spellbook:2026
@@ -136,11 +171,7 @@ services:
       FLAG: ${FLAG_WEB_GHOSTDEX:?missing flag}
     restart: unless-stopped
     read_only: true
-    tmpfs: &id002
-    - /tmp:size=64m
-    - /var/run
-    - /var/cache/nginx
-    - /srv/www:size=64m,uid=101,gid=101,mode=0755
+    tmpfs: *id002
     security_opt:
     - no-new-privileges:true
     cap_drop:

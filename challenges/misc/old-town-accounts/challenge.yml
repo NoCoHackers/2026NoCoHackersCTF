@@ -1,0 +1,45 @@
+name: "PDP-11 After Dark I: The Night Clerk"
+author: bjames
+category: misc
+
+description: |
+  While walking your dog through Lions Park after dark, a cloaked figure
+  presses a battered cartridge into your hands. Its yellowed label reads
+  **OLD TOWN ACCOUNTS — NIGHT COPY — DO NOT RECONCILE**. It is a bootable
+  RK05 image from a PDP-11 running 1974 UNIX V4.
+
+  Recover the night clerk's credential from the cartridge, then sign in to
+  the accounting system that should not still be running.
+
+  Connect: https://old-town-accounts.chal.nocohackers.com
+
+value: 500
+type: dynamic
+extra:
+  initial: 500
+  decay: 20
+  minimum: 100
+
+flags:
+  - noco{87456be352ad1dde153afb588a3f1b19}
+
+tags: [hard, retrocomputing]
+hints: []
+
+files:
+  - handout/old-town-accounts.rk
+  - handout/README.txt
+  - handout/CALDERA-LICENSE.txt
+
+state: hidden
+version: "0.1"
+
+x-noco:
+  kind: web
+  subdomain: old-town-accounts
+  port: null
+  memory: 512m
+  cpus: "2.0"
+  pids: 128
+  autosolve: solution/solve.sh
+  healthcheck_path: /healthz
