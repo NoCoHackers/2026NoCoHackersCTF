@@ -1,0 +1,31 @@
+name: The Proprietor's Copy
+author: bjames
+category: misc
+
+description: |
+  The clerk can alter the office account list, but the proprietor's books are
+  still reserved for the superuser. On this 1974 machine, the number written
+  beside a name may not mean what a modern UNIX operator expects.
+
+  Become the proprietor and open the root copy.
+
+  Connect: https://old-town-accounts.chal.nocohackers.com
+
+value: 500
+type: dynamic
+extra:
+  initial: 500
+  decay: 20
+  minimum: 100
+
+flags:
+  - noco{8ae7a7ee24732126a2823e34db0d0565}
+
+tags: [hard, retrocomputing]
+hints: []
+files: []
+state: hidden
+version: "0.1"
+
+x-noco:
+  autosolve: solution/solve-proprietor.sh

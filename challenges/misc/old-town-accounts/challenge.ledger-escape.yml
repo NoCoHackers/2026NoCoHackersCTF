@@ -1,0 +1,31 @@
+name: Off the Books
+author: bjames
+category: misc
+
+description: |
+  The night ledger accepts only the entries its proprietor expects. Old
+  procedures and a newly posted technical bulletin suggest that its retired
+  report path is less careful than the books themselves.
+
+  Get off the menu and find what the clerk has been told not to read.
+
+  Connect: https://old-town-accounts.chal.nocohackers.com
+
+value: 500
+type: dynamic
+extra:
+  initial: 500
+  decay: 20
+  minimum: 100
+
+flags:
+  - noco{0690ed9b5e9c09569a7bfbd65187cfeb}
+
+tags: [hard, retrocomputing]
+hints: []
+files: []
+state: hidden
+version: "0.1"
+
+x-noco:
+  autosolve: solution/solve-ledger-escape.sh

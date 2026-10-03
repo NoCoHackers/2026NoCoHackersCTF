@@ -1,0 +1,22 @@
+OLD TOWN ACCOUNTS
+NIGHT OPERATOR INSTRUCTIONS          issue 2 / oct 1974
+
+SIGN ON
+The night terminal is station 9.  Its UNIX line is /dev/tty9.
+Use the shared role and current watchword recorded by the office.
+The nightly balance report prints immediately after sign-on.
+
+ACCOUNT INQUIRY
+Select account inquiry and enter the four-digit account number.
+Accounts retained for the night run may not carry a holder name until
+the close clerk finishes reconciliation.
+
+JOURNAL REPRINT
+Select journal reprint and enter the entry number.  Standard report
+designations are S (summary) and D (detail).  Retired designations must
+be handled according to the current technical bulletin on the live
+machine.
+
+SIGN OFF
+Return to the main selection and choose SIGN OFF.  Do not halt UNIX;
+the next operator uses the same station line.

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Old Town Accounts — Night Terminal</title>
+<link rel="stylesheet" href="/xterm.css">
+<style>
+  body { background: #14120f; color: #d8cfae; margin: 0;
+         font-family: ui-monospace, Menlo, Consolas, monospace; }
+  #bar { display: flex; gap: 1em; align-items: center;
+         padding: .5em 1em; background: #201c14; border-bottom: 1px solid #3a3120; }
+  #bar b { letter-spacing: .08em; }
+  #status { margin-left: auto; font-size: .85em; opacity: .8; }
+  #term { height: calc(100vh - 44px); padding: .25em; }
+  #reset { background: #3a3120; color: #d8cfae; border: 1px solid #57492b;
+           padding: .2em .8em; cursor: pointer; }
+  #notice { margin: 0 1em .6em 1em; padding: .4em .8em; background: #33240f;
+            border: 1px solid #6b4a17; font-size: .9em; display: none; }
+  #notice.visible { display: block; }
+</style>
+</head>
+<body>
+<div id="bar">
+  <b>OLD TOWN ACCOUNTS</b>
+  <span style="opacity:.6">night clerk station</span>
+  <button id="reset" title="Wipes this machine and boots a fresh copy. Progress is lost.">Reset machine</button>
+  <span id="status">connecting…</span>
+</div>
+<!--NOTICE-->
+<div id="term"></div>
+<script src="/xterm.js"></script>
+<script>
+const term = new Terminal({ cols: 80, rows: 24, cursorBlink: true,
+                            convertEol: false,
+                            theme: { background: "#14120f", foreground: "#d8cfae" } });
+term.open(document.getElementById("term"));
+const status = document.getElementById("status");
+let ws;
+
+function connect() {
+  status.textContent = "connecting…";
+  // Cookie auth: ota_sess is HttpOnly, sent automatically with the handshake.
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.binaryType = "arraybuffer";
+  ws.onopen = () => { status.textContent = "connected"; };
+  ws.onmessage = (e) => term.write(new Uint8Array(e.data));
+  ws.onclose = () => { status.textContent = "disconnected — retrying in 2s";
+                       setTimeout(connect, 2000); };
+}
+
+term.onData((data) => { if (ws && ws.readyState === 1) ws.send(data); });
+
+document.getElementById("reset").onclick = async () => {
+  if (!confirm("Reset wipes this machine and boots a fresh copy. Continue?"))
+    return;
+  if (ws) {
+    ws.onclose = null;
+    ws.close();
+  }
+  const response = await fetch("/reset", { method: "POST" });
+  if (!response.ok) {
+    status.textContent = response.status === 429
+      ? "reset is cooling down — try again shortly"
+      : "reset failed — reconnecting";
+  } else {
+    status.textContent = "rebooting…";
+  }
+  setTimeout(connect, 2500);
+};
+
+term.focus();
+connect();
+</script>
+</body>
+</html>
