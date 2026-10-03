@@ -1,6 +1,6 @@
 # Old Town Accounts solution
 
-## 1. The Night Clerk
+## 1. PDP-11 After Dark I: The Night Clerk
 
 Boot `handout/old-town-accounts.rk` under a PDP-11/45 or inspect its V4
 filesystem. The intended evidence chain is:
@@ -14,7 +14,7 @@ filesystem. The intended evidence chain is:
 The recovered live credential is `clerk` / `lantern`. Log into the browser
 terminal. The Nightly Balance Report prints the primary runtime flag.
 
-## 2. Off the Books
+## 2. PDP-11 After Dark II: Off the Books
 
 The ledger's notices include Technical Bulletin 7. Journal entry 1041 reaches
 a retired report path. Its implementation is effectively:
@@ -38,7 +38,7 @@ cat /usr/clerk/mailbox
 
 It contains the `ledger-escape` runtime flag.
 
-## 3. The Proprietor's Copy
+## 3. PDP-11 After Dark III: The Proprietor's Copy
 
 `/etc/passwd` is deliberately writable. This shell predates `>>`, and V4 `ed`
 is interactive, so append an account with it:

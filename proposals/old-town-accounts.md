@@ -8,7 +8,7 @@ risks; the manifests and generated deployment are authoritative for shipping.
 
 ## At a glance (maps to the challenge-proposal template)
 
-- **Working title:** Old Town Accounts (three scored entries; see *Scoring*)
+- **Title:** PDP-11 After Dark (three scored entries; see *Scoring*)
 - **Category:** `misc` — it's a retro-computing escape room,
   not modern web exploitation; deployment is still `kind: web`)
 - **Difficulty:** hard (a handful of solves) — the event centerpiece, intended
@@ -58,14 +58,14 @@ multi-manifest convention:
 
 | entry | working name | flag |
 |-------|--------------|------|
-| `challenge.yml` (primary) | The Night Clerk | login to the live ledger |
-| `challenge.ledger-escape.yml` | Off the Books | unprivileged shell |
-| `challenge.proprietor.yml` | The Proprietor's Copy | root |
+| `challenge.yml` (primary) | PDP-11 After Dark I: The Night Clerk | login to the live ledger |
+| `challenge.ledger-escape.yml` | PDP-11 After Dark II: Off the Books | unprivileged shell |
+| `challenge.proprietor.yml` | PDP-11 After Dark III: The Proprietor's Copy | root |
 
 Whether later entries are hidden in CTFd until earlier solves is a
 presentation choice, not a security boundary (all three ship at once).
 
-## Stage 1 — The Night Clerk (initial access)
+## Stage 1 — PDP-11 After Dark I: The Night Clerk (initial access)
 
 **Handout:** a bootable RK05 disk image (the "cartridge") — a separate
 historical backup, *not* a copy of the live challenge disk. Players may boot
@@ -95,7 +95,7 @@ the live service, never on the handout.
 The handout also carries an older operator manual establishing the original
 workflow; the live system's Technical Bulletin 7 describes what changed.
 
-## Stage 2 — Off the Books (application escape)
+## Stage 2 — PDP-11 After Dark II: Off the Books (application escape)
 
 The ledger is a real program running inside UNIX V4. Five commands:
 account inquiry, journal entries, reconcile batch, print report, operator
@@ -147,7 +147,7 @@ a file owned by root, readable by group 0 only, mode 0400 — unreadable from
 the stage-two shell. That boundary is what makes stage three the historical
 flaw rather than a footnote.
 
-## Stage 3 — The Proprietor's Copy (root)
+## Stage 3 — PDP-11 After Dark III: The Proprietor's Copy (root)
 
 **Spike-verified chain** (on-guest, end to end):
 

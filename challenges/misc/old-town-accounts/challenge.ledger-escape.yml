@@ -1,10 +1,11 @@
-name: Off the Books
+name: "PDP-11 After Dark II: Off the Books"
 author: bjames
 category: misc
 
 description: |
-  The night ledger accepts only the entries its proprietor expects. Old
-  procedures and a newly posted technical bulletin suggest that its retired
+  The night ledger still runs under 1974 UNIX V4 on its PDP-11, accepting
+  only the entries its proprietor expects. Old procedures and a newly posted
+  technical bulletin suggest that its retired
   report path is less careful than the books themselves.
 
   Get off the menu and find what the clerk has been told not to read.

@@ -1,11 +1,11 @@
-name: The Proprietor's Copy
+name: "PDP-11 After Dark III: The Proprietor's Copy"
 author: bjames
 category: misc
 
 description: |
   The clerk can alter the office account list, but the proprietor's books are
-  still reserved for the superuser. On this 1974 machine, the number written
-  beside a name may not mean what a modern UNIX operator expects.
+  still reserved for the superuser. On this PDP-11's 1974 UNIX V4, the number
+  written beside a name may not mean what a modern operator expects.
 
   Become the proprietor and open the root copy.
 

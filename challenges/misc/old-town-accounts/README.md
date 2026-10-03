@@ -2,9 +2,9 @@
 
 Three scored challenges share one PDP-11/45 UNIX Fourth Edition service:
 
-1. `The Night Clerk` — recover a credential from the RK05 handout.
-2. `Off the Books` — escape the clerk's restricted ledger.
-3. `The Proprietor's Copy` — exploit historical uid/gid truncation to reach root.
+1. `PDP-11 After Dark I: The Night Clerk` — recover a credential from the RK05 handout.
+2. `PDP-11 After Dark II: Off the Books` — escape the clerk's restricted ledger.
+3. `PDP-11 After Dark III: The Proprietor's Copy` — exploit historical uid/gid truncation to reach root.
 
 ## Local run
 

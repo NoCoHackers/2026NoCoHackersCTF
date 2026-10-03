@@ -1,11 +1,12 @@
-name: The Night Clerk
+name: "PDP-11 After Dark I: The Night Clerk"
 author: bjames
 category: misc
 
 description: |
   While walking your dog through Lions Park after dark, a cloaked figure
   presses a battered cartridge into your hands. Its yellowed label reads
-  **OLD TOWN ACCOUNTS — NIGHT COPY — DO NOT RECONCILE**.
+  **OLD TOWN ACCOUNTS — NIGHT COPY — DO NOT RECONCILE**. It is a bootable
+  RK05 image from a PDP-11 running 1974 UNIX V4.
 
   Recover the night clerk's credential from the cartridge, then sign in to
   the accounting system that should not still be running.
