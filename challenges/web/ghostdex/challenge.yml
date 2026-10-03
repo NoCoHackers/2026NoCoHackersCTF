@@ -30,7 +30,7 @@ hints: []                         # [{content: "...", cost: 50}] - organizers ma
 
 files: []                         # paths under handout/, e.g. [handout/dump.pcap]
 
-state: hidden                     # organizers flip this to visible at kickoff
+state: visible
 version: "0.1"
 
 # ---------------------------------------------------------------------------

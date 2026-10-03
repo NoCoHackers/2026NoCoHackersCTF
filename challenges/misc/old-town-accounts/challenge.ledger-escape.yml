@@ -3,10 +3,9 @@ author: bjames
 category: misc
 
 description: >-
-  The night ledger still runs under 1974 UNIX V4 on its PDP-11, accepting
-  only the entries its proprietor expects. Old procedures and a newly posted
-  technical bulletin suggest that its retired
-  report path is less careful than the books themselves.
+  The night ledger still runs UNIX V4 on a PDP-11. 
+  Old procedures and a newly posted technical bulletin 
+  suggest that its depreciated report path might be vulnerable.
 
   Get off the menu and find what the clerk has been told not to read.
 
@@ -21,7 +20,7 @@ flags:
 tags: [hard, retrocomputing]
 hints: []
 files: []
-state: hidden
+state: visible
 version: "0.1"
 
 x-noco:

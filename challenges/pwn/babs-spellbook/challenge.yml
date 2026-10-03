@@ -17,7 +17,7 @@ flags:
 tags: [sql-injection, beginner]
 hints: []
 files: []
-state: hidden
+state: visible
 version: "1.0"
 
 x-noco:

@@ -17,7 +17,7 @@ flags:
 tags: [beginner]
 hints: []
 files: []
-state: hidden
+state: visible
 version: "0.1"
 
 x-noco:

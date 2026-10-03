@@ -18,7 +18,7 @@ flags:
 tags: [argument-injection, command-injection]
 hints: []
 files: []
-state: hidden
+state: visible
 version: "1.0"
 
 x-noco:

@@ -17,7 +17,7 @@ flags:
 tags: [sql-injection, second-order]
 hints: []
 files: []
-state: hidden
+state: visible
 version: "1.0"
 
 x-noco:

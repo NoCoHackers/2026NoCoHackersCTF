@@ -85,8 +85,6 @@ def check_entry(bundle: Bundle, entry, rep: Report, is_template: bool) -> dict:
 
     if data.get("state") not in (None, "hidden", "visible"):
         rep.error(where, "state must be 'hidden' or 'visible'")
-    if not is_template and data.get("state") == "visible":
-        rep.warn(where, "state is 'visible' - organizers flip this at kickoff, not authors")
 
     flags = normalized_flags(data.get("flags"), where, rep)
     if len(flags) != 1:

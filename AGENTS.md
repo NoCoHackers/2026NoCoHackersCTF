@@ -101,7 +101,7 @@ that matter most:
 | `x-noco.port` | tcp only; unique; in `30000–30099`. |
 | `x-noco.autosolve` | Path to the script CI runs. Must exit 0 and print the flag. |
 | `x-noco.memory` / `cpus` / `pids` | Resource ceilings. Ask for what you need; the defaults suit anything that isn't a database. |
-| `state` | Authors leave it `hidden`. Organizers flip it to `visible` at kickoff. |
+| `state` | Defaults to `visible`; use `hidden` only while an entry must remain unpublished. |
 
 ### Fixed-point scoring
 

@@ -24,7 +24,7 @@ files:
   - handout/README.md
   - handout/common.h
   - handout/lesson4.c
-state: hidden
+state: visible
 version: "1.0"
 
 x-noco:

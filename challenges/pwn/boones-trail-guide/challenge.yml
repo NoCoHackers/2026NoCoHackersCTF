@@ -17,7 +17,7 @@ flags:
 tags: [command-injection, quote-breaking]
 hints: []
 files: []
-state: hidden
+state: visible
 version: "1.0"
 
 x-noco:

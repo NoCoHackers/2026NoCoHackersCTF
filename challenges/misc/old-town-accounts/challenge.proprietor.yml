@@ -4,10 +4,10 @@ category: misc
 
 description: >-
   The clerk can alter the office account list, but the proprietor's books are
-  still reserved for the superuser. On this PDP-11's 1974 UNIX V4, the number
-  written beside a name may not mean what a modern operator expects.
+  still reserved for the superuser. On this PDP-11's UNIX V4, the number
+  written beside a name may not mean what a modern admin expects.
 
-  Become the proprietor and open the root copy.
+  Become root.
 
   Connect: https://old-town-accounts.chal.nocohackers.com
 
@@ -20,7 +20,7 @@ flags:
 tags: [hard, retrocomputing]
 hints: []
 files: []
-state: hidden
+state: visible
 version: "0.1"
 
 x-noco:
