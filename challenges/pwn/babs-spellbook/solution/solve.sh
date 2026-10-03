@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Babs's Spellbook, Lesson 1: The Familiar's Gate - automated solve.
+# Babs's Spellbook, Lesson 1: The Gate - automated solve.
 # $TARGET is "host port".
 #
 # The gate interpolates both answers into its spell:

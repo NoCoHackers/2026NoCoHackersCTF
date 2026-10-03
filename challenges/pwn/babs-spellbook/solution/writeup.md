@@ -15,7 +15,7 @@ inference, and finally second-order injection. After each flag, Babs shows the
 corresponding parameterized Go query; lesson 5 shows that both writes and later
 reads must bind untrusted values.
 
-## Lesson 1 - The Familiar's Gate (authentication bypass)
+## Lesson 1 - The Gate (authentication bypass)
 
 Babs shows her gate spell:
 

@@ -1,10 +1,10 @@
-name: "Babs's Spellbook: The Familiar’s Gate"
+name: "Babs's Spellbook: The Gate"
 author: bjames
 category: pwn
 
 description: |
   Babs the cat-witch teaches ancient database magic, one SQLite spell at a time.
-  Lesson 1: The Familiar’s Gate. Connect to her terminal and select lesson 1.
+  Lesson 1: The Gate. Connect to her terminal and select lesson 1.
   This TCP challenge teaches SQL injection, not binary exploitation.
 
   nc chal.nocohackers.com 30002
