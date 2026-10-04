@@ -93,6 +93,8 @@ jobs:
       - name: build base images
         run: tools/build-base-images.sh
       - name: build, boot, solve
+        env:
+          NOCO_EXTERNAL_LIVE: "0"
         run: tools/test-challenge.sh "${{ matrix.dir }}"
 
   # --------------------------------------------- whole-stack smoke test

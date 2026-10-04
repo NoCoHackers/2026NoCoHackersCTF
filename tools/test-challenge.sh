@@ -63,6 +63,15 @@ PY
 }
 
 external_origin() {
+  python3 - "$1" <<'PY'
+import json
+import sys
+
+print(json.loads(sys.argv[1])["origin"])
+PY
+}
+
+external_snapshot() {
   python3 - "$ROOT" "$CHAL_DIR" <<'PY'
 import sys
 from pathlib import Path
@@ -72,25 +81,51 @@ bundle_dir = Path(sys.argv[2]).resolve()
 sys.path.insert(0, str(root / "tools"))
 
 from chalbundle import load_bundle
-from external import normalize_origin
+from external import live_snapshot
 
-print(normalize_origin(load_bundle(bundle_dir).x.get("url")))
+import json
+
+print(json.dumps(live_snapshot(load_bundle(bundle_dir)), sort_keys=True, separators=(",", ":")))
+PY
+}
+
+check_external_snapshot() {
+  python3 - "$ROOT" "$CHAL_DIR" "$1" <<'PY'
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1]).resolve()
+bundle_dir = Path(sys.argv[2]).resolve()
+snapshot = sys.argv[3]
+sys.path.insert(0, str(root / "tools"))
+
+from chalbundle import load_bundle
+from external import validate_live_snapshot
+
+import json
+
+errors = validate_live_snapshot(load_bundle(bundle_dir), json.loads(snapshot))
+if errors:
+    for error in errors:
+        print(error, file=sys.stderr)
+    raise SystemExit(1)
 PY
 }
 
 write_external_receipt() {
-  python3 - "$ROOT" "$CHAL_DIR" <<'PY'
+  python3 - "$ROOT" "$CHAL_DIR" "$1" <<'PY'
+import json
 import sys
 from pathlib import Path
 
 root = Path(sys.argv[1]).resolve()
 bundle_dir = Path(sys.argv[2]).resolve()
+snapshot = sys.argv[3]
 sys.path.insert(0, str(root / "tools"))
 
-from chalbundle import load_bundle
-from external import write_receipt
+from external import write_receipt_snapshot
 
-path = write_receipt(load_bundle(bundle_dir))
+path = write_receipt_snapshot(bundle_dir, json.loads(snapshot))
 print(path.name)
 PY
 }
@@ -160,7 +195,8 @@ if [[ "$BUNDLE_KIND" == "external" ]]; then
     exit 0
   fi
 
-  ORIGIN=$(external_origin)
+  SNAPSHOT=$(external_snapshot)
+  ORIGIN=$(external_origin "$SNAPSHOT")
   echo "==> live external verification at $ORIGIN"
   for i in "${!MANIFESTS[@]}"; do
     echo "==> external autosolve ${IDS[$i]}: ${TITLES[$i]}"
@@ -172,8 +208,10 @@ if [[ "$BUNDLE_KIND" == "external" ]]; then
       echo "FAIL: ${MANIFESTS[$i]} live solver did not return its declared flag" >&2
       exit 1
     fi
+    check_external_snapshot "$SNAPSHOT" || exit 1
   done
-  RECEIPT=$(write_external_receipt)
+  check_external_snapshot "$SNAPSHOT" || exit 1
+  RECEIPT=$(write_external_receipt "$SNAPSHOT")
   echo "==> wrote $RECEIPT after ${#MANIFESTS[@]} live solve(s)"
   exit 0
 fi

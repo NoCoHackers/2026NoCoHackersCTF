@@ -34,6 +34,7 @@ from chalbundle import (  # noqa: E402
 )
 from external import (  # noqa: E402
     external_bundle_errors,
+    normalize_origin,
     requires_receipt,
     validate_receipt,
 )
@@ -210,6 +211,21 @@ def check_domain_consistency(rep: Report, dirs: list[Path]) -> None:
 
     host_re = re.compile(r"(?:https?://|\bnc\s+)((?:[a-z0-9-]+\.)+[a-z]{2,})", re.I)
     ignore = ("localhost", "example.com", "example.dev", "example.org")
+    exempt_hosts: dict[Path, set[str]] = {}
+    for directory in dirs:
+        try:
+            bundle = load_bundle(directory)
+        except BundleError:
+            continue
+        if bundle.x.get("kind") != "external":
+            continue
+        try:
+            origin_host = re.sub(r"^\[|\]$", "", normalize_origin(bundle.x.get("url")).split("://", 1)[1])
+        except Exception:
+            continue
+        for manifest in candidate_manifests(directory):
+            exempt_hosts.setdefault(manifest.resolve(), set()).add(origin_host.lower())
+
     targets = [p for directory in dirs for p in candidate_manifests(directory)
                if manifest_id(p) is not None]
     targets += [ROOT / "theme" / "partials" / "header.html",
@@ -225,6 +241,8 @@ def check_domain_consistency(rep: Report, dirs: list[Path]) -> None:
             if host in seen or any(host == item or host.endswith("." + item) for item in ignore):
                 continue
             if host.endswith("." + apex) or host == apex:
+                continue
+            if host in exempt_hosts.get(path.resolve(), set()):
                 continue
             seen.add(host)
             rep.warn(where, f"hostname '{host}' is not under the configured domain "

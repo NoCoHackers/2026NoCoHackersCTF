@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import ipaddress
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -31,20 +32,26 @@ def receipt_path(bundle_dir: Path) -> Path:
 
 
 def normalize_origin(url: Any) -> str:
-    if not isinstance(url, str) or not url.strip():
+    if not isinstance(url, str) or not url:
         raise ExternalError("x-noco.url must be a non-empty HTTPS root origin")
-    parsed = urlsplit(url.strip())
+    if any(ch.isspace() or ord(ch) < 0x20 or ord(ch) == 0x7F for ch in url):
+        raise ExternalError("x-noco.url must not contain whitespace or control characters")
+    try:
+        parsed = urlsplit(url)
+    except ValueError as exc:
+        raise ExternalError("x-noco.url is malformed") from exc
     if parsed.scheme != "https":
         raise ExternalError("x-noco.url must use https")
-    if parsed.username or parsed.password:
+    if "@" in parsed.netloc or parsed.username is not None or parsed.password is not None:
         raise ExternalError("x-noco.url must not include credentials")
     try:
+        host = parsed.hostname
         port = parsed.port
     except ValueError as exc:
-        raise ExternalError("x-noco.url has an invalid port") from exc
+        raise ExternalError("x-noco.url has an invalid hostname or port") from exc
     if port is not None:
         raise ExternalError("x-noco.url must not include an explicit port")
-    if not parsed.hostname:
+    if not host:
         raise ExternalError("x-noco.url must include a hostname")
     if parsed.path not in ("", "/"):
         raise ExternalError("x-noco.url must be the root origin")
@@ -52,7 +59,15 @@ def normalize_origin(url: Any) -> str:
         raise ExternalError("x-noco.url must not include a query string")
     if parsed.fragment:
         raise ExternalError("x-noco.url must not include a fragment")
-    return f"https://{parsed.hostname.lower()}"
+    if "%" in host:
+        raise ExternalError("x-noco.url must not include a scoped IPv6 host")
+    if ":" in host:
+        try:
+            host = ipaddress.IPv6Address(host).compressed.lower()
+        except ValueError as exc:
+            raise ExternalError("x-noco.url has an invalid IPv6 host") from exc
+        return f"https://[{host}]"
+    return f"https://{host.lower()}"
 
 
 def external_bundle_errors(bundle: Bundle) -> list[str]:
@@ -94,6 +109,14 @@ def expected_entries(bundle: Bundle) -> list[dict[str, str]]:
     return [entry_metadata(bundle, entry, origin) for entry in bundle.entries]
 
 
+def live_snapshot(bundle: Bundle) -> dict[str, Any]:
+    return {
+        "kind": RECEIPT_KIND,
+        "origin": normalize_origin(bundle.x.get("url")),
+        "entries": expected_entries(bundle),
+    }
+
+
 def _utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
@@ -111,11 +134,16 @@ def _validate_verified_at(value: Any) -> str:
 
 
 def build_receipt(bundle: Bundle, *, verified_at: str | None = None) -> dict[str, Any]:
+    return build_receipt_from_snapshot(live_snapshot(bundle), verified_at=verified_at)
+
+
+def build_receipt_from_snapshot(snapshot: dict[str, Any], *,
+                                verified_at: str | None = None) -> dict[str, Any]:
     return {
-        "kind": RECEIPT_KIND,
+        "kind": snapshot.get("kind", RECEIPT_KIND),
         "verifiedAt": _validate_verified_at(verified_at or _utc_now()),
-        "origin": normalize_origin(bundle.x.get("url")),
-        "entries": expected_entries(bundle),
+        "origin": snapshot["origin"],
+        "entries": snapshot["entries"],
     }
 
 
@@ -124,16 +152,28 @@ def _dump_receipt(data: dict[str, Any]) -> str:
 
 
 def write_receipt(bundle: Bundle, *, verified_at: str | None = None) -> Path:
-    path = receipt_path(bundle.directory)
-    temp = bundle.directory / RECEIPT_TMP_NAME
-    payload = _dump_receipt(build_receipt(bundle, verified_at=verified_at))
+    return write_receipt_snapshot(bundle.directory, live_snapshot(bundle), verified_at=verified_at)
+
+
+def write_receipt_snapshot(bundle_dir: Path, snapshot: dict[str, Any], *,
+                           verified_at: str | None = None) -> Path:
+    path = receipt_path(bundle_dir)
+    temp = bundle_dir / RECEIPT_TMP_NAME
+    payload = _dump_receipt(build_receipt_from_snapshot(snapshot, verified_at=verified_at))
     temp.write_text(payload)
     temp.replace(path)
     return path
 
 
 def load_receipt(path: Path) -> dict[str, Any]:
-    data = json.loads(path.read_text())
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        raise ExternalError("verification.json is not valid UTF-8") from exc
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ExternalError("verification.json is not valid JSON") from exc
     if not isinstance(data, dict):
         raise ExternalError("verification.json must contain a JSON object")
     return data
@@ -148,7 +188,7 @@ def validate_receipt(bundle: Bundle) -> list[str]:
         receipt = load_receipt(path)
     except FileNotFoundError:
         return ["verification.json is required before visible external entries can sync"]
-    except (ExternalError, OSError, json.JSONDecodeError) as exc:
+    except (ExternalError, OSError) as exc:
         return [f"verification.json is invalid: {exc}"]
 
     try:
@@ -193,29 +233,63 @@ def validate_receipt(bundle: Bundle) -> list[str]:
 
 
 def requires_receipt(bundle: Bundle) -> bool:
-    return any(entry.data.get("state") == "visible" for entry in bundle.entries)
+    return any(entry.data.get("state") != "hidden" for entry in bundle.entries)
+
+
+def validate_live_snapshot(bundle: Bundle, snapshot: dict[str, Any]) -> list[str]:
+    try:
+        current = live_snapshot(bundle)
+    except ExternalError as exc:
+        return [f"external bundle metadata changed during live verification: {exc}"]
+    if current.get("origin") != snapshot.get("origin") or current.get("entries") != snapshot.get("entries"):
+        return ["external bundle metadata changed during live verification"]
+    return []
+
+
+def preflight_sync_paths(paths: list[str | Path]) -> list[str]:
+    errors: list[str] = []
+    seen: set[Path] = set()
+    for item in paths:
+        path = Path(item).resolve()
+        bundle_dir = path.parent if path.is_file() else path
+        if bundle_dir in seen:
+            continue
+        seen.add(bundle_dir)
+        try:
+            bundle = load_bundle(bundle_dir)
+        except Exception as exc:
+            errors.append(f"{path}: {exc}")
+            continue
+        if not is_external_bundle(bundle) or not requires_receipt(bundle):
+            continue
+        for error in validate_receipt(bundle):
+            errors.append(f"{bundle_dir}: {error}")
+    return errors
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
 
-    write = sub.add_parser("write-receipt", help="write verification.json for a bundle")
-    write.add_argument("bundle")
-    write.add_argument("--verified-at")
-
     check = sub.add_parser("validate-receipt", help="validate verification.json for a bundle")
     check.add_argument("bundle")
+    preflight = sub.add_parser(
+        "preflight-sync", help="fail closed if any to-be-synced external entry lacks proof")
+    preflight.add_argument("paths", nargs="+")
 
     args = parser.parse_args()
+    if args.command == "preflight-sync":
+        errors = preflight_sync_paths(args.paths)
+        if errors:
+            for error in errors:
+                print(f"external: {error}")
+            return 1
+        print("external: sync preflight passed")
+        return 0
+
     bundle = load_bundle(Path(args.bundle).resolve())
     if not is_external_bundle(bundle):
         raise SystemExit("external: bundle is not marked x-noco.kind: external")
-
-    if args.command == "write-receipt":
-        path = write_receipt(bundle, verified_at=args.verified_at)
-        print(path.relative_to(bundle.directory).as_posix())
-        return 0
 
     errors = validate_receipt(bundle)
     if errors:

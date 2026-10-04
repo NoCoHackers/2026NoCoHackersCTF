@@ -4,6 +4,7 @@ import contextlib
 import importlib.util
 import io
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -167,6 +168,76 @@ if __name__ == "__main__":
             timeout=30,
         )
 
+    def run_sync_fixture(self, *, state: str | None, with_receipt: bool = False) -> tuple[
+            subprocess.CompletedProcess[str], Path, Path]:
+        fixture_root = self.root / "sync-fixture"
+        for directory in (
+            fixture_root / "deploy" / "scoreboard",
+            fixture_root / "tools",
+            fixture_root / "bin",
+            fixture_root / "challenges" / "ai" / "external-fixture",
+        ):
+            directory.mkdir(parents=True, exist_ok=True)
+
+        for relative in (
+            "deploy/scoreboard/sync.sh",
+            "tools/chalbundle.py",
+            "tools/chalmeta.py",
+            "tools/external.py",
+        ):
+            source = ROOT / relative
+            target = fixture_root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, target)
+
+        config_log = fixture_root / "config.log"
+        (fixture_root / "tools" / "ctfd-config.py").write_text(textwrap.dedent(f"""
+            #!/usr/bin/env python3
+            from pathlib import Path
+            Path({str(config_log)!r}).write_text("called\\n", encoding="utf-8")
+        """).lstrip())
+        (fixture_root / "tools" / "ctfd-config.py").chmod(0o755)
+
+        ctf_log = fixture_root / "ctf.log"
+        (fixture_root / "bin" / "ctf").write_text(textwrap.dedent(f"""
+            #!/usr/bin/env bash
+            set -euo pipefail
+            printf '%s\\n' "$*" >> {str(ctf_log)!r}
+            printf 'Syncing existing challenge\\n'
+        """).lstrip())
+        (fixture_root / "bin" / "ctf").chmod(0o755)
+
+        self.write_external_bundle(state="hidden" if state is None else state, entry_ids=("rook",))
+        if state is None:
+            for filename in ("challenge.yml", "challenge.rook.yml"):
+                path = self.bundle_dir / filename
+                data = yaml.safe_load(path.read_text())
+                data.pop("state", None)
+                path.write_text(yaml.safe_dump(data, sort_keys=False))
+        shutil.copytree(self.bundle_dir, fixture_root / "challenges" / "ai" / "external-fixture",
+                        dirs_exist_ok=True)
+        if with_receipt:
+            import external  # noqa: E402
+            bundle = chalbundle.load_bundle(fixture_root / "challenges" / "ai" / "external-fixture")
+            external.write_receipt(bundle, verified_at="2026-10-03T19:00:00Z")
+
+        env = {
+            **os.environ,
+            "PATH": f"{fixture_root / 'bin'}:{os.environ['PATH']}",
+            "CTFCLI_ACCESS_TOKEN": "fixture-token",
+            "TMPDIR": str(self.project_tmp),
+        }
+        result = subprocess.run(
+            [str(fixture_root / "deploy" / "scoreboard" / "sync.sh"), "--dev", "--dry-run",
+             "-c", "challenges/ai/external-fixture"],
+            cwd=fixture_root,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        return result, ctf_log, config_log
+
     def test_validator_rejects_invalid_external_origins_and_local_fields(self):
         self.write_external_bundle()
         self.add_external_solvers()
@@ -219,6 +290,22 @@ if __name__ == "__main__":
         self.assertEqual(len(loaded), 2)
         self.assertEqual(errors, [])
 
+    def test_missing_or_null_state_still_requires_receipt(self):
+        self.write_external_bundle(state="hidden", entry_ids=("rook",))
+        self.add_external_solvers()
+
+        for filename, value in (("challenge.yml", None), ("challenge.rook.yml", "remove")):
+            path = self.bundle_dir / filename
+            data = yaml.safe_load(path.read_text())
+            if value == "remove":
+                data.pop("state", None)
+            else:
+                data["state"] = value
+            path.write_text(yaml.safe_dump(data, sort_keys=False))
+
+        _loaded, errors = self.validate_bundle()
+        self.assertTrue(any("verification.json is required" in item for item in errors), errors)
+
     def test_receipt_ignores_value_hint_tag_and_state_edits_but_detects_version_changes(self):
         self.write_external_bundle(state="hidden", entry_ids=("rook",), versions={
             "main": "1.0",
@@ -248,6 +335,39 @@ if __name__ == "__main__":
         _loaded, errors = self.validate_bundle()
         self.assertTrue(any("metadata fingerprint mismatch" in item for item in errors), errors)
 
+    def test_normalize_origin_rejects_userinfo_whitespace_and_malformed_hosts(self):
+        import external  # noqa: E402
+
+        invalid = {
+            "https://@example.test": "must not include credentials",
+            " https://example.test": "must not contain whitespace or control characters",
+            "https://example.test\t": "must not contain whitespace or control characters",
+            "https://example.test/\n": "must not contain whitespace or control characters",
+            "https://[::1": "is malformed",
+            "https://[2001:db8::1%25eth0]": "must not include a scoped IPv6 host",
+        }
+        for url, message in invalid.items():
+            with self.subTest(url=url), self.assertRaisesRegex(external.ExternalError, message):
+                external.normalize_origin(url)
+
+        self.assertEqual(external.normalize_origin("https://[2001:db8::1]"),
+                         "https://[2001:db8::1]")
+
+    def test_invalid_receipt_bytes_and_json_fail_closed_without_traceback(self):
+        self.write_external_bundle(state="visible")
+        self.add_external_solvers()
+
+        receipt = self.bundle_dir / "verification.json"
+        receipt.write_bytes(b"\xff")
+        _loaded, errors = self.validate_bundle()
+        self.assertTrue(any("verification.json is invalid" in item for item in errors), errors)
+        self.assertFalse(any("Traceback" in item for item in errors), errors)
+
+        receipt.write_text("{not json}\n")
+        _loaded, errors = self.validate_bundle()
+        self.assertTrue(any("verification.json is invalid" in item for item in errors), errors)
+        self.assertFalse(any("Traceback" in item for item in errors), errors)
+
     def test_offline_external_checks_run_contract_tests_only(self):
         self.write_external_bundle(entry_ids=("rook",))
         self.add_external_solvers(overrides={
@@ -271,6 +391,59 @@ exit 99
         self.assertFalse((self.bundle_dir / "solver-ran.txt").exists())
         self.assertFalse((self.bundle_dir / "verification.json").exists())
 
+    def test_live_external_rejects_mid_run_metadata_changes_before_writing_receipt(self):
+        self.write_external_bundle(entry_ids=("rook",))
+        self.add_contract_tests()
+        for mutation in ("flag", "entry-set"):
+            with self.subTest(mutation=mutation):
+                self.write_external_bundle(entry_ids=("rook",))
+                if mutation == "flag":
+                    self.add_external_solvers(overrides={
+                        "main": """#!/usr/bin/env bash
+set -euo pipefail
+python3 - <<'PY'
+from pathlib import Path
+import yaml
+path = Path("challenge.rook.yml")
+data = yaml.safe_load(path.read_text())
+data["flags"] = ["noco{mutated_rook}"]
+path.write_text(yaml.safe_dump(data, sort_keys=False))
+PY
+python3 -c 'import yaml; print(yaml.safe_load(open("challenge.yml"))["flags"][0])'
+""",
+                    })
+                else:
+                    self.add_external_solvers(overrides={
+                        "main": """#!/usr/bin/env bash
+set -euo pipefail
+cat > challenge.vera.yml <<'YML'
+name: External vera
+author: tester
+category: ai
+description: fixture
+value: 300
+type: standard
+version: "0.1"
+flags:
+  - noco{fixture_vera}
+tags: [ai]
+hints:
+  - content: hint
+    cost: 0
+files: []
+state: hidden
+x-noco:
+  autosolve: solution/solve-vera.sh
+YML
+python3 -c 'import yaml; print(yaml.safe_load(open("challenge.yml"))["flags"][0])'
+""",
+                    })
+                result = self.run_test_challenge(live=True)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("metadata changed during live verification",
+                              result.stderr + result.stdout)
+                self.assertFalse((self.bundle_dir / "verification.json").exists())
+
     def test_offline_external_checks_fail_without_any_contract_tests(self):
         self.write_external_bundle()
         self.add_external_solvers()
@@ -279,6 +452,21 @@ exit 99
         result = self.run_test_challenge()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("must define at least one unittest", result.stderr + result.stdout)
+        self.assertFalse((self.bundle_dir / "verification.json").exists())
+
+    def test_external_cli_cannot_fabricate_receipts(self):
+        self.write_external_bundle()
+        self.add_external_solvers()
+
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "external.py"), "write-receipt",
+             str(self.bundle_dir)],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        self.assertNotEqual(result.returncode, 0)
         self.assertFalse((self.bundle_dir / "verification.json").exists())
 
     def test_live_external_checks_write_receipt_only_after_all_solvers_pass(self):
@@ -322,6 +510,54 @@ printf '%s\n' 'noco{wrong_flag}'
         self.assertNotIn("noco{wrong_flag}", combined)
         self.assertEqual((self.bundle_dir / "verification.json").read_text(), original)
         self.assertFalse((self.bundle_dir / "verification.json.tmp").exists())
+
+    def test_domain_consistency_exempts_declared_external_origin_only(self):
+        data = yaml.safe_load(manifest(
+            "External Main", "noco{fixture_main}", x_noco={
+                "kind": "external",
+                "url": "https://approved.example.test",
+                "autosolve": "solution/solve.sh",
+            }))
+        data["description"] = ("visit https://approved.example.test for play and "
+                                "https://mistyped.example.net for a typo")
+        (self.bundle_dir / "challenge.yml").write_text(yaml.safe_dump(data, sort_keys=False))
+        (self.bundle_dir / "solution").mkdir()
+        (self.bundle_dir / "solution" / "writeup.md").write_text("fixture\n")
+        solve = self.bundle_dir / "solution" / "solve.sh"
+        solve.write_text("#!/bin/sh\npython3 -c 'import yaml; print(yaml.safe_load(open(\"challenge.yml\"))[\"flags\"][0])'\n")
+        solve.chmod(0o755)
+
+        report = validator.Report()
+        old_root = validator.ROOT
+        try:
+            validator.ROOT = self.root
+            validator.check_domain_consistency(report, [self.bundle_dir])
+        finally:
+            validator.ROOT = old_root
+
+        self.assertTrue(any("mistyped.example.net" in item for item in report.warnings),
+                        report.warnings)
+        self.assertFalse(any("approved.example.test" in item for item in report.warnings),
+                         report.warnings)
+
+    def test_sync_preflight_blocks_visible_external_without_receipt(self):
+        result, ctf_log, config_log = self.run_sync_fixture(state=None, with_receipt=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("verification.json is required", result.stderr + result.stdout)
+        self.assertFalse(ctf_log.exists())
+        self.assertFalse(config_log.exists())
+
+    def test_sync_preflight_allows_hidden_external_without_receipt(self):
+        result, ctf_log, config_log = self.run_sync_fixture(state="hidden", with_receipt=False)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(ctf_log.exists())
+        self.assertIn("challenge install --force -c challenges/ai/external-fixture/challenge.yml",
+                      ctf_log.read_text())
+        self.assertTrue(config_log.exists())
+
+    def test_ci_autosolve_explicitly_disables_live_external_verification(self):
+        workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text()
+        self.assertIn('NOCO_EXTERNAL_LIVE: "0"', workflow)
 
 
 if __name__ == "__main__":
