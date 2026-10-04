@@ -99,7 +99,7 @@ def hardening(x: dict) -> dict:
 def build_service(bundle, cfg: dict) -> tuple[str, dict] | None:
     x = bundle.x
     kind = x.get("kind")
-    if kind == "static":
+    if kind in {"static", "external"}:
         return None
 
     name = service_name(bundle)

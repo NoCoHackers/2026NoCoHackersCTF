@@ -9,7 +9,10 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 
 [[ -f "$CHAL_DIR/challenge.yml" ]] || { echo "no challenge.yml in $CHAL_DIR" >&2; exit 1; }
-mapfile -t MANIFESTS < <(python3 tools/chalbundle.py manifests "$CHAL_DIR")
+MANIFESTS=()
+while IFS= read -r manifest; do
+  MANIFESTS+=("$manifest")
+done < <(python3 tools/chalbundle.py manifests "$CHAL_DIR")
 [[ ${#MANIFESTS[@]} -gt 0 ]] || { echo "no challenge manifests in $CHAL_DIR" >&2; exit 1; }
 
 eval "$(python3 tools/chalmeta.py "$CHAL_DIR")"
@@ -49,6 +52,73 @@ cleanup() {
 }
 trap cleanup EXIT
 
+count_external_tests() {
+  python3 - "$1" <<'PY'
+import sys
+import unittest
+
+suite = unittest.defaultTestLoader.discover(sys.argv[1])
+print(suite.countTestCases())
+PY
+}
+
+external_origin() {
+  python3 - "$ROOT" "$CHAL_DIR" <<'PY'
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1]).resolve()
+bundle_dir = Path(sys.argv[2]).resolve()
+sys.path.insert(0, str(root / "tools"))
+
+from chalbundle import load_bundle
+from external import normalize_origin
+
+print(normalize_origin(load_bundle(bundle_dir).x.get("url")))
+PY
+}
+
+write_external_receipt() {
+  python3 - "$ROOT" "$CHAL_DIR" <<'PY'
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1]).resolve()
+bundle_dir = Path(sys.argv[2]).resolve()
+sys.path.insert(0, str(root / "tools"))
+
+from chalbundle import load_bundle
+from external import write_receipt
+
+path = write_receipt(load_bundle(bundle_dir))
+print(path.name)
+PY
+}
+
+run_external_solver() {
+  local solve=$1 target=$2
+  python3 - "$CHAL_DIR" "$solve" "$target" <<'PY'
+import os
+import subprocess
+import sys
+
+cwd, solve, target = sys.argv[1:]
+env = os.environ.copy()
+env["TARGET"] = target
+env["NOCO_EXTERNAL_LIVE"] = "1"
+command = [os.path.join(".", solve)]
+try:
+    result = subprocess.run(command, cwd=cwd, env=env, capture_output=True,
+                            text=True, timeout=180)
+except subprocess.TimeoutExpired:
+    sys.stderr.write(f"solver exceeded the hard 180-second limit: {solve}\n")
+    raise SystemExit(124)
+sys.stdout.write(result.stdout)
+sys.stderr.write(result.stderr)
+raise SystemExit(result.returncode)
+PY
+}
+
 solve_entry() {
   local index=$1 target=${2:-} got
   echo "==> autosolve ${IDS[$index]}: ${TITLES[$index]}"
@@ -64,6 +134,49 @@ solve_entry() {
     exit 1
   fi
 }
+
+if [[ "$BUNDLE_KIND" == "external" ]]; then
+  if [[ "${NOCO_EXTERNAL_LIVE:-}" != "1" ]]; then
+    TEST_DIR="$CHAL_DIR/solution/tests"
+    [[ -d "$TEST_DIR" ]] || {
+      echo "FAIL: external bundles must define an offline contract suite at $TEST_DIR" >&2
+      exit 1
+    }
+    TEST_COUNT=$(count_external_tests "$TEST_DIR") || {
+      echo "FAIL: could not discover external contract tests at $TEST_DIR" >&2
+      exit 1
+    }
+    [[ "$TEST_COUNT" =~ ^[0-9]+$ ]] || {
+      echo "FAIL: invalid unittest discovery count for $TEST_DIR" >&2
+      exit 1
+    }
+    [[ "$TEST_COUNT" -gt 0 ]] || {
+      echo "FAIL: external contract suite at $TEST_DIR must define at least one unittest" >&2
+      exit 1
+    }
+    echo "==> external offline contract suite ($TEST_COUNT tests)"
+    python3 -m unittest discover -s "$TEST_DIR" -v
+    echo "==> offline contract only, live solve not attempted"
+    exit 0
+  fi
+
+  ORIGIN=$(external_origin)
+  echo "==> live external verification at $ORIGIN"
+  for i in "${!MANIFESTS[@]}"; do
+    echo "==> external autosolve ${IDS[$i]}: ${TITLES[$i]}"
+    got=$(run_external_solver "${SOLVES[$i]}" "$ORIGIN" 2>/dev/null | tr -d '\r' | tail -1) || {
+      echo "FAIL: ${MANIFESTS[$i]} live solver exited non-zero" >&2
+      exit 1
+    }
+    if [[ "$got" != "${FLAGS[$i]}" ]]; then
+      echo "FAIL: ${MANIFESTS[$i]} live solver did not return its declared flag" >&2
+      exit 1
+    fi
+  done
+  RECEIPT=$(write_external_receipt)
+  echo "==> wrote $RECEIPT after ${#MANIFESTS[@]} live solve(s)"
+  exit 0
+fi
 
 if [[ "$BUNDLE_KIND" == "static" ]]; then
   echo "==> $NAME is static; running ${#MANIFESTS[@]} autosolve(s)"

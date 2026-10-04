@@ -164,6 +164,7 @@ jobs:
           | sort -u | while read -r d; do
               eval "$(python3 tools/chalmeta.py "$d")"
               [ "$CHAL_KIND" = "static" ] && continue
+              [ "$CHAL_KIND" = "external" ] && continue
               name="$(basename "$(dirname "$d")")-$(basename "$d")"
               img="ghcr.io/nocohackers/chal-$name:2026"
               echo "==> $img"

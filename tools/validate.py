@@ -32,9 +32,14 @@ from chalbundle import (  # noqa: E402
     lock_key,
     manifest_id,
 )
+from external import (  # noqa: E402
+    external_bundle_errors,
+    requires_receipt,
+    validate_receipt,
+)
 
-CATEGORIES = {"web", "pwn", "rev", "crypto", "forensics", "osint", "misc"}
-KINDS = {"web", "tcp", "static"}
+CATEGORIES = {"web", "pwn", "rev", "crypto", "forensics", "osint", "misc", "ai"}
+KINDS = {"web", "tcp", "static", "external"}
 FLAG_RE = re.compile(r"^noco\{[\x20-\x7e]{3,120}\}$")
 FLAG_ANY_RE = re.compile(r"noco\{[^}\s]{3,120}\}")
 SUBDOMAIN_RE = re.compile(r"^[a-z0-9]([a-z0-9-]{0,30}[a-z0-9])?$")
@@ -164,10 +169,16 @@ def check_bundle(chal_dir: Path, rep: Report) -> list[dict]:
         if not isinstance(port, int) or port not in PORT_RANGE:
             rep.error(entry_where(bundle.primary),
                       f"x-noco.port {port!r} must be an int in 30000-30099")
+    elif kind == "external":
+        for error in external_bundle_errors(bundle):
+            rep.error(entry_where(bundle.primary), error)
 
     if kind in ("web", "tcp"):
         if not (chal_dir / "Dockerfile").is_file() and not (chal_dir / "compose.yml").is_file():
             rep.error(where, f"kind '{kind}' needs a Dockerfile or compose.yml")
+    elif kind == "external" and requires_receipt(bundle):
+        for error in validate_receipt(bundle):
+            rep.error(where, error)
     if not (chal_dir / "solution" / "writeup.md").is_file():
         rep.error(where, "no solution/writeup.md")
 
@@ -259,7 +270,7 @@ def check_collisions(loaded: list[dict], rep: Report) -> None:
         if bundle.directory.name == "TEMPLATE":
             continue
         where = entry_where(entry)
-        if bundle.x.get("kind") != "static":
+        if bundle.x.get("kind") not in {"static", "external"}:
             variable = host_flag_var(bundle, entry)
             if variable in host_vars:
                 rep.error(where, f"runtime flag variable {variable} already used by "

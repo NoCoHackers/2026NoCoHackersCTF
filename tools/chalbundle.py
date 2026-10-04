@@ -182,7 +182,9 @@ def main() -> int:
                 print(path.relative_to(ROOT).as_posix())
         else:
             for bundle in discover_bundles():
-                if bundle.directory.name == "TEMPLATE" or bundle.x.get("kind") == "static":
+                if bundle.directory.name == "TEMPLATE" or bundle.x.get("kind") in {
+                    "static", "external"
+                }:
                     continue
                 for entry in bundle.entries:
                     flags = entry.data.get("flags")
