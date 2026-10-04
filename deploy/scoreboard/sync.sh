@@ -58,20 +58,27 @@ if [[ -n "$ONE" ]]; then
 else
   manifest_output=$(python3 tools/chalbundle.py manifests)
 fi
-mapfile -t manifests <<< "$manifest_output"
+manifests=()
+while IFS= read -r manifest; do
+  [[ -n "$manifest" ]] || continue
+  manifests+=("$manifest")
+done <<< "$manifest_output"
+
+python3 tools/external.py preflight-sync "${manifests[@]}"
 
 echo "sync: pushing ${#manifests[@]} challenge(s) ..."
 fail=0
 for manifest in "${manifests[@]}"; do
   name=$(python3 tools/chalmeta.py "$manifest" | sed -n "s/^CHAL_TITLE=//p" | tr -d "'")
-  if ctf challenge install --force -c "$manifest" >/tmp/noco-sync.$$ 2>&1; then
-    if grep -q 'Syncing existing' /tmp/noco-sync.$$; then verb="updated"; else verb="created"; fi
+  if output=$(ctf challenge install --force -c "$manifest" 2>&1); then
+    if grep -q 'Syncing existing' <<<"$output"; then verb="updated"; else verb="created"; fi
     echo "  ok   $verb: $name"
   else
-    echo "  FAIL $name"; sed 's/^/       | /' /tmp/noco-sync.$$; fail=1
+    echo "  FAIL $name"
+    sed 's/^/       | /' <<<"$output"
+    fail=1
   fi
 done
-rm -f /tmp/noco-sync.$$
 
 # --- event config -----------------------------------------------------------
 echo "sync: pushing event config from event.yml ..."

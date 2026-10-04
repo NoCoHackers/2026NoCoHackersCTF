@@ -32,9 +32,16 @@ from chalbundle import (  # noqa: E402
     lock_key,
     manifest_id,
 )
+from external import (  # noqa: E402
+    ExternalError,
+    external_bundle_errors,
+    normalize_origin,
+    requires_receipt,
+    validate_receipt,
+)
 
-CATEGORIES = {"web", "pwn", "rev", "crypto", "forensics", "osint", "misc"}
-KINDS = {"web", "tcp", "static"}
+CATEGORIES = {"web", "pwn", "rev", "crypto", "forensics", "osint", "misc", "ai"}
+KINDS = {"web", "tcp", "static", "external"}
 FLAG_RE = re.compile(r"^noco\{[\x20-\x7e]{3,120}\}$")
 FLAG_ANY_RE = re.compile(r"noco\{[^}\s]{3,120}\}")
 SUBDOMAIN_RE = re.compile(r"^[a-z0-9]([a-z0-9-]{0,30}[a-z0-9])?$")
@@ -164,10 +171,16 @@ def check_bundle(chal_dir: Path, rep: Report) -> list[dict]:
         if not isinstance(port, int) or port not in PORT_RANGE:
             rep.error(entry_where(bundle.primary),
                       f"x-noco.port {port!r} must be an int in 30000-30099")
+    elif kind == "external":
+        for error in external_bundle_errors(bundle):
+            rep.error(entry_where(bundle.primary), error)
 
     if kind in ("web", "tcp"):
         if not (chal_dir / "Dockerfile").is_file() and not (chal_dir / "compose.yml").is_file():
             rep.error(where, f"kind '{kind}' needs a Dockerfile or compose.yml")
+    elif kind == "external" and requires_receipt(bundle):
+        for error in validate_receipt(bundle):
+            rep.error(where, error)
     if not (chal_dir / "solution" / "writeup.md").is_file():
         rep.error(where, "no solution/writeup.md")
 
@@ -199,6 +212,21 @@ def check_domain_consistency(rep: Report, dirs: list[Path]) -> None:
 
     host_re = re.compile(r"(?:https?://|\bnc\s+)((?:[a-z0-9-]+\.)+[a-z]{2,})", re.I)
     ignore = ("localhost", "example.com", "example.dev", "example.org")
+    exempt_hosts: dict[Path, set[str]] = {}
+    for directory in dirs:
+        try:
+            bundle = load_bundle(directory)
+        except BundleError:
+            continue
+        if bundle.x.get("kind") != "external":
+            continue
+        try:
+            origin_host = re.sub(r"^\[|\]$", "", normalize_origin(bundle.x.get("url")).split("://", 1)[1])
+        except ExternalError:
+            continue
+        for manifest in candidate_manifests(directory):
+            exempt_hosts.setdefault(manifest.resolve(), set()).add(origin_host.lower())
+
     targets = [p for directory in dirs for p in candidate_manifests(directory)
                if manifest_id(p) is not None]
     targets += [ROOT / "theme" / "partials" / "header.html",
@@ -214,6 +242,8 @@ def check_domain_consistency(rep: Report, dirs: list[Path]) -> None:
             if host in seen or any(host == item or host.endswith("." + item) for item in ignore):
                 continue
             if host.endswith("." + apex) or host == apex:
+                continue
+            if host in exempt_hosts.get(path.resolve(), set()):
                 continue
             seen.add(host)
             rep.warn(where, f"hostname '{host}' is not under the configured domain "
@@ -259,7 +289,7 @@ def check_collisions(loaded: list[dict], rep: Report) -> None:
         if bundle.directory.name == "TEMPLATE":
             continue
         where = entry_where(entry)
-        if bundle.x.get("kind") != "static":
+        if bundle.x.get("kind") not in {"static", "external"}:
             variable = host_flag_var(bundle, entry)
             if variable in host_vars:
                 rep.error(where, f"runtime flag variable {variable} already used by "

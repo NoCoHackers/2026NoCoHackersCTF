@@ -93,6 +93,8 @@ jobs:
       - name: build base images
         run: tools/build-base-images.sh
       - name: build, boot, solve
+        env:
+          NOCO_EXTERNAL_LIVE: "0"
         run: tools/test-challenge.sh "${{ matrix.dir }}"
 
   # --------------------------------------------- whole-stack smoke test
@@ -164,6 +166,7 @@ jobs:
           | sort -u | while read -r d; do
               eval "$(python3 tools/chalmeta.py "$d")"
               [ "$CHAL_KIND" = "static" ] && continue
+              [ "$CHAL_KIND" = "external" ] && continue
               name="$(basename "$(dirname "$d")")-$(basename "$d")"
               img="ghcr.io/nocohackers/chal-$name:2026"
               echo "==> $img"
