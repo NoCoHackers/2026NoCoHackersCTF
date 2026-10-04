@@ -33,6 +33,7 @@ from chalbundle import (  # noqa: E402
     manifest_id,
 )
 from external import (  # noqa: E402
+    ExternalError,
     external_bundle_errors,
     normalize_origin,
     requires_receipt,
@@ -221,7 +222,7 @@ def check_domain_consistency(rep: Report, dirs: list[Path]) -> None:
             continue
         try:
             origin_host = re.sub(r"^\[|\]$", "", normalize_origin(bundle.x.get("url")).split("://", 1)[1])
-        except Exception:
+        except ExternalError:
             continue
         for manifest in candidate_manifests(directory):
             exempt_hosts.setdefault(manifest.resolve(), set()).add(origin_host.lower())

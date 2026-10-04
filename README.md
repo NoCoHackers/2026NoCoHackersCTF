@@ -48,15 +48,16 @@ tools/test-challenge.sh challenges/web/ghostdex        # build, boot, autosolve
 |------|-----------|
 | **`theme/`** | The look of the event. Design tokens (`tokens.css`), components (`theme.css`), header/footer partials, favicon, and the netcat banner. One palette and system-font type stack. Every challenge links `theme.bundle.css`. |
 | **`images/`** | The three base images every challenge builds `FROM`: `base-web` (nginx + runtime flag templating), `base-pwn` (socat fork-per-connection), and `theme-assets` (just the theme, for challenges with their own stack). |
-| **`challenges/`** | One deployment bundle per directory, grouped by category. `TEMPLATE/` is the starting point. The current tree contains 7 runnable bundles and 17 independently scored entries. |
+| **`challenges/`** | One bundle per directory, grouped by category. `TEMPLATE/` is the starting point. The current tree contains 8 locally runnable bundles, 1 external bundle and 23 independently scored entries. |
 | **`deploy/`** | Two hosts. `deploy/scoreboard/` runs CTFd + MariaDB + Redis + Caddy with backups; `deploy/chals/` runs Traefik and every challenge; `deploy/host/` and `deploy/digitalocean/` bootstrap existing VPSes and configure their edge. |
 | **`tools/`** | Build, validate, and test scripts — the same ones CI runs. |
 | **`.github/`** | CI, code owners, and the templates for proposing and submitting challenges. |
 
 ## Current challenge set
 
-The repository currently has **7 runnable bundles** producing **17 scored
-entries**. All manifests remain `hidden` until kickoff. The manifests are the
+The repository currently has **8 locally runnable bundles and 1 external bundle**
+producing **23 scored entries**. External entries remain `hidden` until an
+organizer completes explicit live verification. The manifests are the
 source of truth; this table is an author-facing snapshot of the current tree.
 
 | category | bundle | scored entries | service |
@@ -68,6 +69,8 @@ source of truth; this table is an author-facing snapshot of the current tree.
 | pwn | `babs-spellbook` | 5 | TCP `30002` |
 | pwn | `boones-trail-guide` | 4 | TCP `30003` |
 | pwn | `sams-burrow-guide` | 4 | TCP `30004` |
+| misc | `old-town-accounts` | 3 | Web terminal |
+| ai | `meridian-hotline` | 3 | External Azure phone/text service |
 
 The three guided pwn bundles form complementary curricula:
 
@@ -92,12 +95,17 @@ higher than the event snapshot above.)
   so 25 challenges from different authors read as one event. Sensible system
   font stacks keep typography fast and network-independent.
 - **Challenges are code.** Each codebase/deployment is a directory with a
-  primary `challenge.yml`, a Dockerfile, source, and an automated solve. A
+  primary `challenge.yml`, an automated solve and an organizer writeup. Local
+  services also include a Dockerfile and source; external services stay on
+  their existing host. A
   directory may add `challenge.<id>.yml` manifests for separately scored flags.
   Metadata syncs into CTFd via `ctfcli`; deploy compose comes from the primary.
 - **CI won't let a broken challenge through.** Every pull request builds each
-  changed bundle once, then boots a fresh hardened container for every
+  changed local bundle once, then boots a fresh hardened container for every
   autosolve and asserts its flag comes back. It also fails on image-layer leaks.
+  External bundles get offline contract checks in PR CI and require explicitly
+  requested live solves before becoming visible; CI does not silently spend a
+  provider budget.
 - **Flags are injected at runtime.** Source uses `__FLAG__` or a named bundle
   token such as `__FLAG_UART__`; the real flags live only in their manifests
   and reach containers through the environment, never a pullable image.
@@ -135,7 +143,7 @@ Full contributor guidance is in **[AGENTS.md](AGENTS.md)**.
   aspen gold, pumpkin light. Challenge descriptions are written in-world;
   challenges are places something got loose.
 - **Scoreboard:** CTFd at `ctf.nocohackers.com`.
-- **Categories:** web, pwn, rev, crypto, forensics, osint, misc.
+- **Categories:** web, pwn, rev, crypto, forensics, osint, misc, ai.
 - **Participation:** individual players (CTFd *users* mode).
 - **Flag format:** `noco{...}`.
 

@@ -54,9 +54,27 @@ def manifest(name: str, flag: str, *, state: str = "hidden", version: str = "0.1
 
 
 class ExternalSupportTests(unittest.TestCase):
+    def test_live_selection_and_awards_are_bound_to_the_same_snapshot(self):
+        import external
+        self.assertTrue(hasattr(external, "validate_live_selection"))
+        self.assertTrue(hasattr(external, "validate_live_award"))
+        self.write_external_bundle(entry_ids=("rook",))
+        bundle = self.load_bundle()
+        old_flag = bundle.primary.flag
+        data = yaml.safe_load((self.bundle_dir / "challenge.yml").read_text())
+        data["flags"] = ["noco{changed_before_snapshot}"]
+        (self.bundle_dir / "challenge.yml").write_text(yaml.safe_dump(data))
+        current = self.load_bundle()
+        snapshot = external.live_snapshot(current)
+        self.assertTrue(external.validate_live_selection(snapshot, ["main"]))
+        self.assertFalse(external.validate_live_selection(snapshot, ["main", "rook"]))
+        self.assertTrue(external.validate_live_award(snapshot, "main", old_flag))
+        self.assertFalse(external.validate_live_award(snapshot, "main", current.primary.flag))
+        self.assertTrue(external.validate_live_award(snapshot, "unknown", current.primary.flag))
+
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory()
-        self.root = Path(self.temp.name)
+        self.temp = tempfile.TemporaryDirectory(prefix=".external-test-", dir=ROOT)
+        self.root = Path(self.temp.name).resolve()
         self.bundle_dir = self.root / "challenges" / "ai" / "external-fixture"
         self.bundle_dir.mkdir(parents=True)
         self.project_tmp = self.root / "project-tmp"

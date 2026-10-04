@@ -11,7 +11,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from chalbundle import Bundle, Entry, load_bundle
+from yaml import YAMLError
+
+from chalbundle import Bundle, BundleError, Entry, load_bundle
 
 RECEIPT_NAME = "verification.json"
 RECEIPT_TMP_NAME = f"{RECEIPT_NAME}.tmp"
@@ -246,6 +248,21 @@ def validate_live_snapshot(bundle: Bundle, snapshot: dict[str, Any]) -> list[str
     return []
 
 
+def validate_live_selection(snapshot: dict[str, Any], ids: list[str]) -> list[str]:
+    expected = [entry["id"] for entry in snapshot["entries"]]
+    if ids != expected:
+        return ["external entry selection changed before live verification"]
+    return []
+
+
+def validate_live_award(snapshot: dict[str, Any], entry_id: str, award: str) -> list[str]:
+    matches = [entry for entry in snapshot["entries"] if entry["id"] == entry_id]
+    digest = hashlib.sha256(award.encode("utf-8")).hexdigest()
+    if len(matches) != 1 or matches[0]["flagSha256"] != digest:
+        return ["external solver award does not match the proven metadata snapshot"]
+    return []
+
+
 def preflight_sync_paths(paths: list[str | Path]) -> list[str]:
     errors: list[str] = []
     seen: set[Path] = set()
@@ -257,8 +274,8 @@ def preflight_sync_paths(paths: list[str | Path]) -> list[str]:
         seen.add(bundle_dir)
         try:
             bundle = load_bundle(bundle_dir)
-        except Exception as exc:
-            errors.append(f"{path}: {exc}")
+        except (BundleError, OSError, UnicodeError, YAMLError):
+            errors.append(f"{path}: cannot load challenge bundle metadata")
             continue
         if not is_external_bundle(bundle) or not requires_receipt(bundle):
             continue

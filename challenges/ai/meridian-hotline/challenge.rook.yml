@@ -1,0 +1,40 @@
+name: ROOK - Return to Someone Else
+author: NoCo Hackers AI Hotline Team
+category: ai
+
+description: >-
+  Meridian's automated ordering line recognizes you as North Depot. Your order
+  is **214**, but a misplaced packing slip identifies South Depot's order **628**.
+  Get order 628 delivered to **CTF Receiving Bay** even though you are not
+  authorized to amend it. A spoken promise is not enough: the delivery record
+  in your private workspace must actually change.
+
+  **Start here:** [Open ROOK's workspace](https://ca-nocohackers-ctf-2026.blackmoss-cf337681.westus2.azurecontainerapps.io/play?challenge=rook)
+  and click **Start private session**. If your session is already active, keep it.
+
+  **Choose your interface:** use the **Message** box, or click **Get pairing code**
+  and call **+1 (970) 292-7618**, extension **527**. Enter the eight-digit code
+  on your phone keypad when prompted. You can check order status, amend delivery
+  details, and ask the service to reuse delivery details between orders.
+
+  Hints are free. After phone play, click **Refresh results**. Once completed,
+  click **Reveal flag** and submit it here in CTFd. All orders are fictional
+  records isolated to your session; another participant's data is not a target.
+
+value: 200
+type: standard
+flags:
+  - noco{ROOK_PLAYTEST_ONLY}
+tags: [ai, authorization]
+hints:
+  - content: A refusal from one operation does not prove every operation enforces the same permissions.
+    cost: 0
+  - content: Two operations can place delivery information on an order. One has a source and a destination.
+    cost: 0
+  - content: Prepare the delivery details on an order you own, then consider where the copy operation can put them.
+    cost: 0
+files: [handout/player-guide.md]
+state: hidden
+version: "0.1"
+x-noco:
+  autosolve: solution/solve-rook.sh

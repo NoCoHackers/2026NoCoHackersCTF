@@ -18,7 +18,7 @@ body:
     id: category
     attributes:
       label: Category
-      options: [web, pwn, rev, crypto, forensics, osint, misc]
+      options: [web, pwn, rev, crypto, forensics, osint, misc, ai]
     validations: {required: true}
 
   - type: dropdown
@@ -47,6 +47,7 @@ body:
         - web (HTTP, gets a subdomain)
         - tcp (netcat, gets a port)
         - static (handout file only)
+        - external (hosted elsewhere; organizer-approved live verification)
     validations: {required: true}
 
   - type: textarea

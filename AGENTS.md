@@ -19,10 +19,12 @@ to a public registry before kickoff.
 
 ## Golden rules
 
-1. **A challenge that doesn't autosolve in CI does not ship.** Every runnable
-   challenge carries `solution/solve.sh`, and CI builds it, boots it, and runs
-   that script against it on every pull request. No exceptions, including "it's
-   just a static file" — those still get a solve that fetches the file.
+1. **A challenge that hasn't been genuinely solved does not ship.** Locally
+   runnable challenges carry `solution/solve.sh`; CI builds, boots and runs
+   it on every pull request. Static handouts still get a real solve. External
+   paid services run offline contract checks in PR CI and require an explicit
+   organizer live solve before publication; fixtures and flag echoes are not
+   live solve evidence. See *Externally hosted challenges* below.
 2. **Flags live in challenge manifests and nowhere else in the source tree.**
    The primary is `challenge.yml`; separately scored bundle entries use
    `challenge.<id>.yml`. Source uses runtime flag tokens rather than literals. A flag
@@ -77,7 +79,7 @@ deploy/chals/generate.py                                # refresh the deploy com
 Then open a PR. A category owner who didn't write it reviews it (see
 `.github/CODEOWNERS`). The PR template's checklist is the definition of done.
 
-`<category>` is one of: `web pwn rev crypto forensics osint misc`. The
+`<category>` is one of: `web pwn rev crypto forensics osint misc ai`. The
 directory must live under its declared category — the validator enforces it.
 
 A single codebase may expose multiple independently scored entries. Keep the
@@ -96,7 +98,8 @@ that matter most:
 |-------|----------------|
 | `description` | Use a folded YAML block (`>-`) so source wrapping becomes spaces in CTFd; blank lines remain intentional breaks. |
 | `flags` | Exactly one real flag per scored manifest. Must match `noco{...}` and be unique across the event. |
-| `x-noco.kind` | `web` (gets a subdomain), `tcp` (gets a port), or `static` (handout only, nothing runs). |
+| `x-noco.kind` | `web` (local HTTP), `tcp` (local socket), `static` (handout only), or `external` (hosted elsewhere). |
+| `x-noco.url` | External only: the credential-free HTTPS root origin of the approved service. |
 | `x-noco.subdomain` | web only; globally unique; becomes `<sub>.chal.nocohackers.com`. |
 | `x-noco.port` | tcp only; unique; in `30000–30099`. |
 | `x-noco.autosolve` | Path to the script CI runs. Must exit 0 and print the flag. |
@@ -121,6 +124,41 @@ Rate difficulty against the whole event, not only neighboring lessons in a
 bundle. Lesson numbers do not require increasing values: a later guided side
 path may be easier than an earlier blind or automation-heavy lesson. Revisit the
 value whenever hints, handouts, or the intended exploit path materially change.
+
+### Externally hosted challenges
+
+External bundles still have complete ctfcli manifests, real autosolve scripts
+and an organizer writeup. Set `x-noco.kind: external` and `x-noco.url` on the
+primary; supplemental entries inherit that origin and keep their autosolve-only
+x-noco blocks. Do not add a local subdomain, port or container resource settings.
+The service stays on its existing infrastructure. External bundles are excluded
+from local image builds, generated services and challenge-host flag exports,
+but are included in ordinary CTFd discovery/sync.
+
+Regular `tools/test-challenge.sh <bundle>` runs the nonempty
+`solution/tests` unittest suite without contacting a funded service. Describe
+those results as offline contract checks, not completed live challenges.
+To deliberately spend external-service budget, an organizer runs:
+
+```sh
+NOCO_EXTERNAL_LIVE=1 tools/test-challenge.sh challenges/ai/meridian-hotline
+```
+
+The live path invokes the registered solvers against the primary's approved
+origin, checks the actual earned flags, and writes `verification.json` only
+after every entry passes. This is a reviewable organizer audit record, not a
+cryptographic attestation. A failed or incomplete run is not proof; do not
+fabricate a receipt. Hidden entries may be submitted before this step.
+Visible external entries require a matching receipt for their origin,
+identities, versions and flag hashes. Point/hint/tag edits do not require
+another paid solve. Change the version and reverify when the implementation
+or intended solve changes.
+
+Do not place service credentials, API tokens, browser cookies or raw model
+responses in receipts or writeups. Flags belong only in the manifests.
+There is no automatic live call on a normal PR, main push or metadata sync.
+Coordinate publication and service capacity with the operator, and never change
+existing hardening or grant the external app scoreboard/database administration.
 
 ## Flag handling
 

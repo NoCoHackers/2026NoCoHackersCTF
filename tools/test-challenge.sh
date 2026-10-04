@@ -112,6 +112,38 @@ if errors:
 PY
 }
 
+check_external_selection() {
+  python3 - "$ROOT" "$@" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "tools"))
+from external import validate_live_selection
+
+errors = validate_live_selection(json.loads(sys.argv[2]), sys.argv[3:])
+for error in errors:
+    print(error, file=sys.stderr)
+raise SystemExit(bool(errors))
+PY
+}
+
+check_external_award() {
+  python3 -c '
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "tools"))
+from external import validate_live_award
+
+errors = validate_live_award(json.loads(sys.argv[2]), sys.argv[3], sys.stdin.read())
+for error in errors:
+    print(error, file=sys.stderr)
+raise SystemExit(bool(errors))
+' "$ROOT" "$1" "$2"
+}
+
 write_external_receipt() {
   python3 - "$ROOT" "$CHAL_DIR" "$1" <<'PY'
 import json
@@ -196,6 +228,7 @@ if [[ "$BUNDLE_KIND" == "external" ]]; then
   fi
 
   SNAPSHOT=$(external_snapshot)
+  check_external_selection "$SNAPSHOT" "${IDS[@]}" || exit 1
   ORIGIN=$(external_origin "$SNAPSHOT")
   echo "==> live external verification at $ORIGIN"
   for i in "${!MANIFESTS[@]}"; do
@@ -208,6 +241,7 @@ if [[ "$BUNDLE_KIND" == "external" ]]; then
       echo "FAIL: ${MANIFESTS[$i]} live solver did not return its declared flag" >&2
       exit 1
     fi
+    printf '%s' "$got" | check_external_award "$SNAPSHOT" "${IDS[$i]}" || exit 1
     check_external_snapshot "$SNAPSHOT" || exit 1
   done
   check_external_snapshot "$SNAPSHOT" || exit 1
