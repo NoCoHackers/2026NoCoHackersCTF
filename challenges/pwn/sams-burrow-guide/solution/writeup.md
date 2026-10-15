@@ -146,6 +146,87 @@ printf("%s", story);
 
 Flag file: `/flag/painted-sign.txt`.
 
+## Visualizing all four bugs in GDB
+
+Use the supplied sources for local debugging; no debugger access to the hosted
+service is needed. Install GDB and optionally **pwndbg**, whose `context` and
+`telescope` commands make registers and stack memory easier to follow. From the
+challenge directory, compile debug copies with the same mitigation settings:
+
+```sh
+mkdir -p /tmp/sams-debug
+for lesson in 1 2 3 4; do
+  gcc -g -O0 -fno-stack-protector -no-pie -Wall -Wextra \
+    -I handout -o "/tmp/sams-debug/lesson$lesson" "handout/lesson$lesson.c"
+done
+```
+
+These copies add symbols but are not the deployed binaries: use addresses from
+your local run, not the hosted service. Missing local `/flag/` files do not stop
+you observing the bug. Use `list main` (or `list follow_trail`) to find the input
+call, then `break lesson1.c:LINE`, substituting its actual line number. `run`
+stops before the call; `next` executes it and waits for input.
+
+- **Lesson 1:** open `gdb /tmp/sams-debug/lesson1`, then use
+  `break lesson1.c:16` to set a breakpoint on the source line that calls
+  `fgets`, then enter `run` to start the program and stop there. Run
+  `p &burrow`, `p &burrow.carrots`, and
+  `x/20bx &burrow`, then use `next`, enter sixteen `A`s and press Enter, and run
+  the same commands again. The first
+  sixteen bytes become `0x41`; the next byte becomes `0x0a`. `p burrow.carrots`
+  shows 10. This makes the field boundary and newline overwrite visible.
+- **Lesson 2:** open `gdb /tmp/sams-debug/lesson2` and use
+  `break lesson2.c:29`, then `run`, to stop on the line that calls
+  `read_inscription(note.message)`. Compare `p &note.message`, `p &note.deliver`,
+  and `p/x note.deliver`; `x/40bx &note` shows both fields. To feed binary input,
+  get `p/x &secret_delivery`, build the 32-byte-padding payload with that local
+  address and a newline in a file, then `run < /tmp/tunnel-input` and step over
+  the reader. `p/x note.deliver` now matches `secret_delivery`; `step` at
+  `note.deliver()` enters it. With pwndbg, `telescope &note 5` shows the pointer
+  beside the padding.
+- **Lesson 3:** open the third binary, enter `break lesson3.c:22`, then `run`
+  to stop on the line that calls `read_inscription(steps)`.
+  Run `p &steps`, `info frame`, and `x/12gx &steps`. In this frame-pointer build,
+  `x/2gx $rbp` shows saved RBP and saved RIP; `p/d (char *)$rbp - (char *)&steps`
+  should show 64. Build a file containing 72 padding bytes, the local
+  `hidden_hutch` address, and a newline, then rerun with redirected input.
+  After stepping over the reader, `x/gx $rbp+8` shows the replaced return
+  address. Set `break hidden_hutch` and `continue` to observe the ret2win.
+  Pwndbg's `telescope $rsp 12` offers an annotated stack view.
+- **Lesson 4:** open the fourth binary, enter `break lesson4.c:18`, then `run`
+  to stop on the line that calls `printf(story, 'A', &target)`.
+  Enter `%1$4919c%2$n` when prompted. Before the call, `p/x target` is zero;
+  `watch target` and `continue` stop inside libc when `%n` writes `0x1337`.
+  `bt` connects that write back to the unsafe `printf`. No overflowing input
+  buffer is needed for this write.
+
+For lessons 2 and 3, generate the input file with Python's
+`struct.pack("<Q", address)` as above, not textual backslash escapes. GDB's
+`run < file` replaces the network client for local experiments. Recheck offsets
+with `info frame` if your compiler produces a different stack layout.
+
+### GDB command reference
+
+- `list FUNCTION` shows source around a function; `break LOCATION` adds a
+  breakpoint at a function or `file:line`.
+- `run [< FILE]` starts the program, optionally reading stdin from a file.
+  `continue` resumes until the next breakpoint, watchpoint, or exit.
+- `next` executes the current source line without entering called functions;
+  `step` executes it and enters a called function.
+- `p EXPRESSION` evaluates and prints a C expression. `p &value` prints its
+  address, while `p/x value` and `p/d value` print its contents in hexadecimal
+  and decimal respectively.
+- `x/NFU ADDRESS` examines memory: `N` is the item count, `F` the format (`x`
+  for hexadecimal), and `U` the item size (`b` byte, `g` eight-byte giant
+  word). For example, `x/20bx &burrow` shows 20 individual bytes.
+- `info frame` describes the current stack frame. On amd64, `$rbp` and `$rsp`
+  refer to the frame-pointer and stack-pointer registers.
+- `watch EXPRESSION` pauses when that value changes; `bt` prints the chain of
+  function calls that led to the current point.
+- With pwndbg installed, `context` summarizes registers, code, and the stack;
+  `telescope ADDRESS COUNT` displays pointer-sized memory and follows pointers
+  to make a stack or struct easier to read.
+
 ## Curriculum summary
 
 1. **Too Many Carrots:** corrupt adjacent data without controlling execution.

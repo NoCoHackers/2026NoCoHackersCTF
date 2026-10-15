@@ -11,6 +11,22 @@ filesystem. The intended evidence chain is:
 4. `/usr/adm/watch.oct` records the watchword octets for that account.
 5. `/usr/ledger/manual` explains how those octets are decoded.
 
+You can also inspect the raw image without booting it. From the challenge
+directory, use `strings` to find the readable notes and watchword table:
+
+```sh
+binwalk handout/old-town-accounts.rk
+strings -a handout/old-town-accounts.rk | less
+strings -a handout/old-town-accounts.rk | grep -A 8 -B 3 '0317'
+```
+
+Search in `less` for `login role`, `OMITTED`, and `0317`. Correlate the
+still-open account 0317 with its watchword table row, `0317      lantern`,
+and the note identifying the login role as `clerk`. Other accounts and old
+credentials are distractors. `binwalk handout/old-town-accounts.rk` can help
+triage the image, but automatic extraction may not recognize this historical
+V4 filesystem; a missing signature does not mean there is no readable evidence.
+
 The recovered live credential is `clerk` / `lantern`. Log into the browser
 terminal. The Nightly Balance Report prints the primary runtime flag.
 

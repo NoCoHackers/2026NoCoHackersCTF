@@ -12,10 +12,7 @@ Town" — Halloween in Fort Collins): the shared visual theme, the base Docker
 images challenges build on, every challenge, the CI that proves challenges
 work, and the deploy configuration for two hosts.
 
-The repository is **private until the event ends**. Flags, solutions, and
-unreleased challenges are all here in the clear. Do not fork it public, do not
-paste challenge internals into a public issue, and do not push challenge images
-to a public registry before kickoff.
+The repository was **private until the event ended**.
 
 ## Golden rules
 

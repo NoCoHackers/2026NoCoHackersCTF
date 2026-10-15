@@ -17,7 +17,7 @@ reads must bind untrusted values.
 
 ## Lesson 1 - The Gate (authentication bypass)
 
-Babs shows her gate spell:
+Babs shows her spell:
 
 ```sql
 SELECT name FROM apprentices WHERE name = '<name>' AND secret = '<secret>'
@@ -42,7 +42,7 @@ SELECT title, description FROM spells WHERE title LIKE '%<search>%'
 
 Intended answer: `' UNION SELECT title, description FROM locked_shelf --`.
 The locked shelf has the same two columns, so the UNION appends its row to
-the result set and the challenge helpfully prints it. The lesson is that a
+the result set and the challenge prints it. The lesson is that a
 SELECT's result set is shaped by the query, not by the author's intent, and
 that column counts must match for UNION.
 

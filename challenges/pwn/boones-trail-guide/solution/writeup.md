@@ -36,7 +36,7 @@ Flag file: `/flag/flag.txt`.
 
 ## Lesson 2 - Dangerous Options: argument injection without a shell
 
-The packer uses a fixed executable and passes each value as a distinct argv
+The compression script uses a fixed executable and passes each value as a distinct argv
 entry:
 
 ```text

