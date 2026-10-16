@@ -52,15 +52,15 @@ Install `deploy/scoreboard/backup.env.example` as `/etc/noco/backup.env` (mode
 `up` to sync then converge the role. It deliberately excludes plaintext secret
 files from rsync deletion.
 
-## Automatic challenge deployment from GitHub
+## Historical automatic deployment from GitHub
 
-The main CI workflow deploys the challenge host after publishing images and
-before syncing CTFd. It runs for pushes to `main` and can be retried from
-**Actions → ci → Run workflow** with the `main` branch selected. Manual runs on
-other branches cannot publish or deploy. Because GitHub-hosted runners have
-changing addresses, the job adds its public `/32` to the DigitalOcean Cloud
-Firewall for the duration of the SSH deployment and removes it in an `always()`
-cleanup step.
+During the event, the main CI workflow deployed the challenge host after
+publishing images and before syncing CTFd. It ran for pushes to `main`; manual
+runs on other branches could not publish or deploy. Because GitHub-hosted
+runners have changing addresses, the job added its public `/32` to the
+DigitalOcean Cloud Firewall for the duration of the SSH deployment and removed
+it in an `always()` cleanup step. The workflow is not included in the public
+archive.
 
 Create a dedicated key; do not reuse an organizer's SSH identity:
 
@@ -79,7 +79,8 @@ ssh root@$HOST 'cat /etc/ssh/ssh_host_ed25519_key.pub' |
   awk -v host="$HOST" '{print host, $1, $2}'
 ```
 
-Configure the GitHub **`production` environment**:
+The workflow used the following values in a protected GitHub **`production`
+environment**:
 
 | kind | name | value |
 |------|------|-------|
@@ -90,7 +91,3 @@ Configure the GitHub **`production` environment**:
 | secret | `DIGITALOCEAN_ACCESS_TOKEN` | token limited to firewall read/write |
 | secret | `CTFCLI_ACCESS_TOKEN` | CTFd admin API token used by the following sync job |
 
-Protect `main` with required reviews. A workflow revision merged to `main` can
-use the deploy key to reach an account in the Docker group, which is effectively
-root access to the challenge VPS. The temporary firewall rule narrows network
-exposure; it does not make unreviewed workflow code safe.

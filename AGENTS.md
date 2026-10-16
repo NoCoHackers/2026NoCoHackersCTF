@@ -9,32 +9,33 @@ you touch anything, and keep changes consistent with it.
 
 Everything needed to run **NoCo Hackers CTF 2026** ("Something's loose in Old
 Town" — Halloween in Fort Collins): the shared visual theme, the base Docker
-images challenges build on, every challenge, the CI that proves challenges
-work, and the deploy configuration for two hosts.
+images challenges build on, every challenge, the automated solves that prove
+challenges work, and the deploy configuration used by two hosts.
 
 The repository was **private until the event ended**.
 
 ## Golden rules
 
 1. **A challenge that hasn't been genuinely solved does not ship.** Locally
-   runnable challenges carry `solution/solve.sh`; CI builds, boots and runs
-   it on every pull request. Static handouts still get a real solve. External
-   paid services run offline contract checks in PR CI and require an explicit
-   organizer live solve before publication; fixtures and flag echoes are not
-   live solve evidence. See *Externally hosted challenges* below.
+   runnable challenges carry `solution/solve.sh`; run it through
+   `tools/test-challenge.sh` before submitting changes. Static handouts still
+   get a real solve. External paid services use offline contract checks and
+   require an explicit organizer live solve before publication; fixtures and
+   flag echoes are not live solve evidence. See *Externally hosted challenges*
+   below.
 2. **Flags live in challenge manifests and nowhere else in the source tree.**
    The primary is `challenge.yml`; separately scored bundle entries use
    `challenge.<id>.yml`. Source uses runtime flag tokens rather than literals. A flag
    baked into an image layer is readable by anyone who can pull the image, so
-   CI fails the build if it finds one. See *Flag handling* below.
+   `tools/test-challenge.sh` fails if it finds one. See *Flag handling* below.
 3. **Never weaken the container hardening.** `read_only`, `cap_drop: ALL`,
    `no-new-privileges`, and the resource caps are how one compromised challenge
    stays one compromised challenge. Authors may *raise* resource ceilings in
    `challenge.yml`; nobody opts out of the security options.
 4. **The generated compose is generated.** `deploy/chals/docker-compose.generated.yml`
    is produced from the challenges by `deploy/chals/generate.py`. Change a
-   `challenge.yml`, then re-run the generator; never hand-edit the output. CI
-   fails if it's stale.
+   `challenge.yml`, then re-run the generator; never hand-edit the output.
+   `deploy/chals/generate.py --check` fails if it's stale.
 5. **Match the surroundings.** New code should read like the code next to it —
    same shell idioms, same comment density, same naming. New challenges should
    look like the same event: link the shared theme, write descriptions in its
@@ -57,8 +58,8 @@ deploy/chals/   Challenge host: Traefik + the generated compose + a Makefile.
 deploy/scoreboard/  Scoreboard host: CTFd + MariaDB + Redis + Caddy + backups.
 deploy/host/    Role-based bootstrap and artifact-only remote deployment.
 deploy/digitalocean/  Cloud Firewall and DNS automation for existing Droplets.
-tools/          Build, validate, and test scripts. Start here to understand CI.
-.github/        CI workflow, CODEOWNERS, PR and proposal templates.
+tools/          Build, validate, and test scripts used locally and by the event pipeline.
+.github/        CODEOWNERS, PR template, and challenge proposal template.
 ```
 
 ## Adding a challenge
@@ -99,7 +100,7 @@ that matter most:
 | `x-noco.url` | External only: the credential-free HTTPS root origin of the approved service. |
 | `x-noco.subdomain` | web only; globally unique; becomes `<sub>.chal.nocohackers.com`. |
 | `x-noco.port` | tcp only; unique; in `30000–30099`. |
-| `x-noco.autosolve` | Path to the script CI runs. Must exit 0 and print the flag. |
+| `x-noco.autosolve` | Path to the script the test harness runs. Must exit 0 and print the flag. |
 | `x-noco.memory` / `cpus` / `pids` | Resource ceilings. Ask for what you need; the defaults suit anything that isn't a database. |
 | `state` | Defaults to `visible`; use `hidden` only while an entry must remain unpublished. |
 
@@ -174,7 +175,7 @@ This is the single most important mechanic in the repo, so it's spelled out.
 - On the host, `deploy/chals/flags.env` is generated from the challenge
   manifests during deployment, synced as a mode-600 artifact, and kept out of
   git by `.gitignore`. The manifests are the single source of truth.
-- CI enforces all of this: `tools/validate.py` fails if a flag literal appears
+- `tools/validate.py` enforces this: it fails if a flag literal appears
   anywhere in the source outside `challenge.yml`, and `tools/test-challenge.sh`
   greps the built image's filesystem and history for the flag.
 
@@ -235,10 +236,10 @@ Under the hood `sync` runs `ctf challenge install --force` per challenge (create
 token is read from the environment and never committed; `.ctf/config` holds only
 the public URL.
 
-On every successful `main` push, CI validates and autosolves, publishes images,
-deploys the challenge host, verifies its public edge, then runs `make sync`.
-The deploy job temporarily allows only its runner's `/32` through the
-DigitalOcean SSH firewall and removes that rule afterward. Configure the GitHub
+During the event, every successful `main` push validated and autosolved,
+published images, deployed the challenge host, verified its public edge, then
+ran `make sync`. The deploy job temporarily allowed only its runner's `/32`
+through the DigitalOcean SSH firewall and removed that rule afterward. Configure the GitHub
 `production` environment with variables `CHALLENGE_HOST` and
 `CHALLENGE_FIREWALL_ID`, plus secrets `CHALLENGE_SSH_PRIVATE_KEY`,
 `CHALLENGE_SSH_KNOWN_HOSTS`, `DIGITALOCEAN_ACCESS_TOKEN`, and
@@ -291,12 +292,11 @@ under `make dev` works when deployed.
 | `tools/validate.py [dir]` | Bundle and manifest schema; flag format; subdomain/port/flag/name collisions; flags not leaked into source. |
 | `tools/test-challenge.sh <dir>` | Builds once, scans every flag, then uses a fresh hardened container for each autosolve. Static bundles run their solves without a container. Set `NOCO_KEEP=1` to leave containers up. |
 | `tools/build-base-images.sh` | Rebuilds the three base images. |
-| `sh tools/build-theme.sh` | Regenerates `theme/theme.bundle.css`. Run it after editing tokens or components; CI fails if the bundle is stale. |
+| `sh tools/build-theme.sh` | Regenerates `theme/theme.bundle.css`. Run it after editing tokens or components; commit the refreshed bundle. |
 
-CI (`.github/workflows/ci.yml`) runs validate on everything, then autosolve on
-the challenges your PR actually changed (or all of them, if you touched the
-theme, a base image, or the tooling). On merge to `main` it pushes the base and
-challenge images to GHCR.
+The event's GitHub Actions workflow ran these checks automatically and pushed
+images on `main`. It is omitted from the public post-event archive; run the commands above
+locally.
 
 ## Style
 

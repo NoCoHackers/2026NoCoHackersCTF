@@ -4,9 +4,9 @@
 
 The complete kit for running **NoCo Hackers CTF 2026**, a Halloween-in-Fort-
 Collins capture-the-flag event. This repository holds the shared theme, the
-base Docker images challenges are built on, the challenges themselves, the CI
-that proves every challenge is solvable, and the deploy configuration for the
-two hosts the event runs on.
+base Docker images challenges are built on, the challenges themselves, the
+automated solves that prove every challenge is solvable, and the deployment
+configuration used by the event's two hosts.
 
 **This repo was private until the event ended.** It contains flags and
 solutions in the clear.
@@ -50,8 +50,8 @@ tools/test-challenge.sh challenges/web/ghostdex        # build, boot, autosolve
 | **`images/`** | The three base images every challenge builds `FROM`: `base-web` (nginx + runtime flag templating), `base-pwn` (socat fork-per-connection), and `theme-assets` (just the theme, for challenges with their own stack). |
 | **`challenges/`** | One bundle per directory, grouped by category. `TEMPLATE/` is the starting point. The current tree contains 8 locally runnable bundles, 1 external bundle and 23 independently scored entries. |
 | **`deploy/`** | Two hosts. `deploy/scoreboard/` runs CTFd + MariaDB + Redis + Caddy with backups; `deploy/chals/` runs Traefik and every challenge; `deploy/host/` and `deploy/digitalocean/` bootstrap existing VPSes and configure their edge. |
-| **`tools/`** | Build, validate, and test scripts, including the same ones CI runs. |
-| **`.github/`** | CI, code owners, and the templates for proposing and submitting challenges. |
+| **`tools/`** | Build, validation, and autosolve scripts used locally and by the event pipeline. |
+| **`.github/`** | Code owners and the templates used to propose and submit challenges. |
 
 ## Current challenge set
 
@@ -100,12 +100,6 @@ higher than the event snapshot above.)
   their existing host. A
   directory may add `challenge.<id>.yml` manifests for separately scored flags.
   Metadata syncs into CTFd via `ctfcli`; deploy compose comes from the primary.
-- **CI won't let a broken challenge through.** Every pull request builds each
-  changed local bundle once, then boots a fresh hardened container for every
-  autosolve and asserts its flag comes back. It also fails on image-layer leaks.
-  External bundles get offline contract checks in PR CI and require explicitly
-  requested live solves before becoming visible; CI does not silently spend a
-  provider budget.
 - **Flags are injected at runtime.** Source uses `__FLAG__` or a named bundle
   token such as `__FLAG_UART__`; the real flags live only in their manifests
   and reach containers through the environment, never a pullable image.
@@ -113,10 +107,33 @@ higher than the event snapshot above.)
   the challenge containers (attacker-controlled code) run on separate VMs on
   separate networks, so a container escape can't reach the scoreboard.
 
+## Event CI/CD pipeline
+
+During development, a GitHub Actions workflow validated every bundle and ran
+autosolves for changed challenges on each pull request. Changes to shared
+themes, base images, or tooling triggered every autosolve. The workflow also
+built the complete local stack to smoke-test routing and container hardening.
+External paid services received offline contract tests unless an organizer
+explicitly requested a live verification, preventing CI from spending provider
+budgets unexpectedly.
+
+After a successful push to `main`, the pipeline built and published the base
+and challenge images to GHCR, temporarily allowed the GitHub runner through the
+DigitalOcean SSH firewall, deployed the challenge host, verified its public
+edge, removed the temporary firewall rule, and synchronized challenge metadata
+and event configuration to CTFd. Production secrets lived in the protected
+GitHub environment and were never committed.
+
+The production workflow is intentionally omitted from this public, post-event
+archive. The event infrastructure can be retired separately without leaving a
+repository workflow wired to production credentials. The validation,
+build, local-stack, autosolve, and deployment tools remain available for study
+and local use.
+
 ## Submitting a challenge
 
-Challenges come from more than one author, so submission is PR-based and
-gated by CI and a category owner's review.
+During event development, challenges came from more than one author, so
+submission was PR-based and gated by automation and a category owner's review.
 
 1. **Pitch it:** open a [challenge proposal](.github/ISSUE_TEMPLATE/challenge-proposal.yml)
    so two people don't build the same thing.
@@ -124,7 +141,7 @@ gated by CI and a category owner's review.
    fill in `challenge.yml`, write the challenge, and write a **real**
    `solution/solve.sh` and `solution/writeup.md`.
 3. **Check it:** `tools/validate.py` and `tools/test-challenge.sh` must pass
-   locally; they're what CI runs.
+   locally; these are the same checks the event pipeline ran.
 4. **Open a PR:** the checklist in the PR template is the definition of done.
 
 Full contributor guidance is in **[AGENTS.md](AGENTS.md)**.

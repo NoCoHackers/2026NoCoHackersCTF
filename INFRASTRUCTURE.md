@@ -90,8 +90,8 @@ Run `make domains` after editing it. That regenerates `deploy/domains.env` (the
 - **Caddy scoreboard** (`Caddyfile`) - reads `{$NOCO_*}` from the same env file.
 - **`make sync`** - derives the CTFd URL from the block.
 
-`tools/domains.py --print` shows the derived hostnames; `--check` (run in CI)
-fails if `deploy/domains.env` is stale. Hostnames written as prose in challenge
+`tools/domains.py --print` shows the derived hostnames; `--check` fails if
+`deploy/domains.env` is stale. Hostnames written as prose in challenge
 descriptions and theme links aren't generated - a
 `tools/validate.py` warning flags any that fall outside the configured domain
 after a rebrand.
@@ -245,8 +245,8 @@ make host-up ROLE=chals HOST=noco@203.0.113.10
 ssh noco@203.0.113.10 'make -C /opt/noco/deploy/chals ps'
 ```
 
-Images are built and pushed by CI on merge to `main` and deployed **by tag**
-(`:2026`). The operator checkout generates `deploy/chals/flags.env` directly
+During the event, images were built and pushed by CI on merge to `main` and
+deployed **by tag** (`:2026`). The operator checkout generates `deploy/chals/flags.env` directly
 from the challenge manifests during deployment, then syncs that mode-600 file
 to the host. It remains gitignored; the host receives only deploy artifacts,
 not challenge sources or solutions.
@@ -265,7 +265,8 @@ make host-up ROLE=scoreboard HOST=noco@203.0.113.20
 The scoreboard's Caddy is a **custom image** (`images/caddy/`): stock Caddy plus
 the `rate_limit` module, which the stock image lacks and which the Caddyfile
 needs to cap `/login`, `/register`, and flag submissions at the edge. `--build`
-compiles it locally; CI also publishes it to `ghcr.io/nocohackers/caddy-ratelimit`.
+compiles it locally; the event pipeline also published it to
+`ghcr.io/nocohackers/caddy-ratelimit`.
 
 Generate the secrets with `openssl rand -hex 32` (for `CTFD_SECRET_KEY`) and
 `openssl rand -hex 20` (for the DB passwords). Redis-backed sessions are on by
@@ -293,12 +294,12 @@ users, teams, submissions, or scores - verified against a live instance:
 participant data and a score record survived repeated syncs while a challenge's
 point value updated in place.
 
-After every successful `main` push, CI publishes images, temporarily opens SSH
-from that runner's `/32`, runs the same artifact-only `host-up` deployment,
-checks the public challenge edge, closes SSH again, and only then syncs CTFd.
-Configure the GitHub `production` environment as documented in
-`deploy/host/README.md`. If container deployment fails, CTFd metadata is not
-advanced to the broken revision.
+During the event, every successful `main` push published images, temporarily
+opened SSH from that runner's `/32`, ran the same artifact-only `host-up`
+deployment, checked the public challenge edge, closed SSH again, and only then
+synced CTFd. The protected GitHub `production` environment held the credentials
+documented in `deploy/host/README.md`. If container deployment failed, CTFd
+metadata was not advanced to the broken revision.
 
 Do **not** use CTFd's admin Export/Import to push updates - that snapshot
 replaces the whole instance, players included. It's a backup tool (below), not a
@@ -359,7 +360,7 @@ Symptom → action:
 | A challenge is eating the host | Its `mem_limit`/`pids_limit` should contain it; if an author set them too high, lower in `challenge.yml`, regenerate, `up`. |
 | A popular web challenge is slow under load | It's shared and stateless, so it's safe to scale — raise its `cpus`, or run a second copy on another subdomain. |
 | Scoreboard slow | Check Redis is up; check the Caddy rate limits are catching a flood on `/login` or flag submission; the DB is on an internal network so it isn't external load. |
-| Flag disputes / "my flag isn't accepted" | Compare against `challenge.yml`; the flag there is authoritative and is what CI verified. |
+| Flag disputes / "my flag isn't accepted" | Compare against `challenge.yml`; the flag there is authoritative and is what the autosolve verified. |
 | Suspected compromise of a challenge | Expected and contained — the container is disposable and isolated. `reset-one`. If the *host* looks touched, that's the boundary that matters: rotate, and note the scoreboard is a separate host. |
 
 ## Pre-event checklist
@@ -371,10 +372,10 @@ Symptom → action:
 - [ ] DNS pointed; domain on an ACME-capable provider; wildcard cert issued
       (hit `https://up.chal.nocohackers.com`).
 - [ ] GitHub `production` environment has the deploy variables/secrets from
-      `deploy/host/README.md`; one `main` push has completed deploy and cleanup.
+      `deploy/host/README.md`; one pipeline run has completed deploy and cleanup.
 - [ ] CTFd up, themed, scoring decided, rate limits on, Redis sessions on.
 - [ ] Backups running hourly **and pushing off-host**; a restore rehearsed.
 - [ ] Full dry run: deploy everything from a clean clone, and have an organizer
       who didn't write them solve five challenges at random.
-- [ ] Every challenge green in CI; `state: hidden` until kickoff.
+- [ ] Every challenge passes validation and its autosolve; `state: hidden` until kickoff.
 - [ ] Scoreboard owner named.

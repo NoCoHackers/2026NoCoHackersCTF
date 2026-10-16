@@ -3,7 +3,7 @@
 #
 # The top-level keys are ctfcli's schema (they get synced into CTFd verbatim).
 # The `x-noco` block is ours and drives deployment. Both are checked by
-# `tools/validate.py`, which CI runs on every pull request.
+# `tools/validate.py`; run it before submitting changes.
 #
 # Copy this whole directory to challenges/<category>/<your-slug>/ to start.
 # For another separately scored flag in the same codebase, add a complete
@@ -50,7 +50,7 @@ x-noco:
   cpus: "0.5"
   pids: 128
 
-  # How CI proves the challenge works. `autosolve` must exit 0 and print the
+  # How the test harness proves the challenge works. `autosolve` must exit 0 and print the
   # flag to stdout. This is not optional - see AGENTS.md.
   autosolve: solution/solve.sh
   healthcheck_path: /             # web only
